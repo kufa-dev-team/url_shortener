@@ -24,6 +24,8 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.ShortCode).IsUnique();
             entity.Property(e => e.ClickCount).HasDefaultValue(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
         });
     }
 }
