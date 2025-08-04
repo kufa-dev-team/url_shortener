@@ -10,7 +10,12 @@ builder.Services.AddSwaggerGen();
 
 // Add application layers
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("DefaultConnection") ?? "");
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("The connection string 'DefaultConnection' was not found or is empty. Please check your configuration.");
+
+builder.Services.AddInfrastructure(connectionString);
 
 var app = builder.Build();
 
