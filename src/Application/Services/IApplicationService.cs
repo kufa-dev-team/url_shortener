@@ -1,6 +1,11 @@
+using Domain.Entities;
+
 namespace Application.Services;
 
-public interface IApplicationService
+public interface IUrlShortenerService
 {
-    // Define application service contracts here
+    Task<ShortenedUrl> CreateShortUrlAsync(string originalUrl);
+    Task<ShortenedUrl?> GetByShortCodeAsync(string shortCode);
+    Task<IEnumerable<ShortenedUrl>> GetAllUrlsAsync();
+    Task<string> RedirectToOriginalUrlAsync(string shortCode);
 }
