@@ -33,18 +33,37 @@ src/
 ### Prerequisites
 
 - .NET 9.0 SDK
-- Docker & Docker Compose (for databases)
+- **Docker Desktop** (Windows/Mac) or Docker Engine (Linux)
 - Your favorite IDE (Visual Studio, VS Code, Rider)
+
+**Important:** Make sure Docker Desktop is running before starting the services!
 
 ### Quick Start with Docker
 
 1. **Start the infrastructure services:**
+
+**macOS/Linux:**
 ```bash
 # Navigate to compose directory
 cd compose
 
 # Copy environment configuration
 cp .env.example .env
+
+# Start PostgreSQL and Redis
+docker-compose -f docker-compose.dev.yml up -d
+
+# Verify services are running
+docker-compose -f docker-compose.dev.yml ps
+```
+
+**Windows (PowerShell):**
+```powershell
+# Navigate to compose directory
+cd compose
+
+# Copy environment configuration
+Copy-Item .env.example .env
 
 # Start PostgreSQL and Redis
 docker-compose -f docker-compose.dev.yml up -d
@@ -75,12 +94,13 @@ Once Docker Compose is running, you'll have access to:
 |---------|-----|---------|
 | PostgreSQL | `localhost:5432` | Main database |
 | Redis | `localhost:6379` | Caching layer |
-| pgAdmin | http://localhost:8080 | Database management UI |
+| Supabase Studio | http://localhost:8080 | Modern PostgreSQL management UI |
 | Redis Commander | http://localhost:8081 | Redis management UI |
 
 **Default credentials:**
 - PostgreSQL: `postgres/postgres`
-- pgAdmin: `admin@urlshortener.local/admin`
+- Redis Commander: `admin/admin`
+- Supabase Studio: Direct database connection (no separate auth)
 
 ### Local Development (Alternative)
 
@@ -131,7 +151,7 @@ The application uses the following connection strings (configured in `appsetting
 - **Architecture**: Clean Architecture
 - **Patterns**: Repository, Dependency Injection
 - **Development**: Docker Compose for local services
-- **Admin Tools**: pgAdmin 4, Redis Commander
+- **Admin Tools**: Supabase Studio, Redis Commander
 
 ## 📚 Features
 
@@ -284,7 +304,7 @@ The `compose/` folder contains everything needed for local development:
 
 - **PostgreSQL 16** with automatic initialization
 - **Redis 7** with persistence and memory optimization
-- **pgAdmin 4** for database management
+- **Supabase Studio** for modern database management
 - **Redis Commander** for cache inspection
 - **Health checks** for all services
 - **Data persistence** across container restarts
