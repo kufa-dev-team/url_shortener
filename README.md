@@ -33,14 +33,30 @@ src/
 ### Prerequisites
 
 - .NET 9.0 SDK
+- Docker & Docker Compose (for databases)
 - Your favorite IDE (Visual Studio, VS Code, Rider)
 
-### Running the Application
+### Quick Start with Docker
 
+1. **Start the infrastructure services:**
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd url_shortener
+# Navigate to compose directory
+cd compose
+
+# Copy environment configuration
+cp .env.example .env
+
+# Start PostgreSQL and Redis
+docker-compose -f docker-compose.dev.yml up -d
+
+# Verify services are running
+docker-compose -f docker-compose.dev.yml ps
+```
+
+2. **Run the application:**
+```bash
+# Return to project root
+cd ..
 
 # Build the solution
 dotnet build
@@ -50,6 +66,34 @@ dotnet run --project src/API
 ```
 
 The application will start on `http://localhost:5135`
+
+### Development Services
+
+Once Docker Compose is running, you'll have access to:
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| PostgreSQL | `localhost:5432` | Main database |
+| Redis | `localhost:6379` | Caching layer |
+| pgAdmin | http://localhost:8080 | Database management UI |
+| Redis Commander | http://localhost:8081 | Redis management UI |
+
+**Default credentials:**
+- PostgreSQL: `postgres/postgres`
+- pgAdmin: `admin@urlshortener.local/admin`
+
+### Local Development (Alternative)
+
+If you prefer to run databases locally without Docker:
+
+```bash
+# Install PostgreSQL and Redis locally
+# Update connection strings in appsettings.json
+
+# Build and run
+dotnet build
+dotnet run --project src/API
+```
 
 ### API Usage
 
@@ -66,13 +110,28 @@ curl -L http://localhost:5135/abc123
 # Redirects to original URL
 ```
 
+### Environment Configuration
+
+The application uses the following connection strings (configured in `appsettings.json`):
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=urlshortener;Username=postgres;Password=postgres",
+    "Redis": "localhost:6379"
+  }
+}
+```
+
 ## 🔧 Technology Stack
 
 - **Framework**: ASP.NET Core 9.0
-- **Database**: Entity Framework Core (In-Memory for demo)
-- **Caching**: Redis integration examples (StackExchange.Redis)
+- **Database**: PostgreSQL 16 with Entity Framework Core
+- **Caching**: Redis 7 with StackExchange.Redis
 - **Architecture**: Clean Architecture
 - **Patterns**: Repository, Dependency Injection
+- **Development**: Docker Compose for local services
+- **Admin Tools**: pgAdmin 4, Redis Commander
 
 ## 📚 Features
 
@@ -211,8 +270,26 @@ url_shortener/
 │   └── Infrastructure/
 │       ├── Data/               # Database context
 │       └── Repositories/       # Data access
+├── compose/
+│   ├── docker-compose.dev.yml  # Development services
+│   ├── init-scripts/           # Database initialization
+│   ├── .env.example           # Environment template
+│   └── README.md              # Compose documentation
 └── README.md
 ```
+
+## 🐳 Docker Development Environment
+
+The `compose/` folder contains everything needed for local development:
+
+- **PostgreSQL 16** with automatic initialization
+- **Redis 7** with persistence and memory optimization
+- **pgAdmin 4** for database management
+- **Redis Commander** for cache inspection
+- **Health checks** for all services
+- **Data persistence** across container restarts
+
+See `compose/README.md` for detailed Docker Compose usage instructions.
 
 ## 🚀 Future Enhancements
 
