@@ -1,0 +1,19 @@
+@__HostAddress = http://localhost:5135
+
+### Get all URLs
+GET {{__HostAddress}}/api/urls
+Accept: application/json
+
+### Create short URL
+POST {{__HostAddress}}/api/urls
+Content-Type: application/json
+
+{
+  "originalUrl": "https://example.com/very-long-url-that-needs-shortening"
+}
+
+### Get URL by short code
+GET {{__HostAddress}}/api/urls/abc123
+Accept: application/json
+
+###
