@@ -4,8 +4,8 @@ namespace Application.Services;
 
 public interface IUrlShortenerService
 {
-    Task<ShortenedUrl> CreateShortUrlAsync(string originalUrl);
-    Task<ShortenedUrl?> GetByShortCodeAsync(string shortCode);
-    Task<IEnumerable<ShortenedUrl>> GetAllUrlsAsync();
+    Task<UrlMapping> CreateShortUrlAsync(string originalUrl);
+    Task<UrlMapping?> GetByShortCodeAsync(string shortCode);
+    Task<IEnumerable<UrlMapping>> GetAllUrlsAsync();
     Task<string> RedirectToOriginalUrlAsync(string shortCode);
 }
