@@ -1,6 +1,6 @@
 namespace Domain.Entities;
 
-public class ShortenedUrl : BaseEntity
+public class UrlMapping : BaseEntity
 {
     public string OriginalUrl { get; set; } = string.Empty;
     public string ShortCode { get; set; } = string.Empty;
