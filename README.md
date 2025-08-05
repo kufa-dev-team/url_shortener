@@ -227,20 +227,20 @@ var cacheKey = $"url_{shortCode}";
 var cachedUrl = await _distributedCache.GetStringAsync(cacheKey);
 if (cachedUrl != null)
 {
-    return JsonSerializer.Deserialize<UrlMapping>(cachedUrl);
+    return JsonSerializer.Deserialize<ShortenedUrlResponse>(cachedUrl);
 }
 
-var urlMapping = await _dbSet.FirstOrDefaultAsync(x => x.ShortCode == shortCode);
-if (urlMapping != null)
+var shortenedUrl = await _dbSet.FirstOrDefaultAsync(x => x.ShortCode == shortCode);
+if (shortenedUrl != null)
 {
-    var serialized = JsonSerializer.Serialize(urlMapping);
+    var serialized = JsonSerializer.Serialize(shortenedUrl);
     await _distributedCache.SetStringAsync(cacheKey, serialized, 
         new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
         });
 }
-return urlMapping;
+return shortenedUrl;
 ```
 
 ## 🎯 Key Learning Areas
