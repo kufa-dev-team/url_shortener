@@ -2,7 +2,7 @@ using Domain.Entities;
 
 namespace Application.Services;
 
-public interface IUrlShortenerService
+public interface IUrlMappingService
 {
     Task<UrlMapping> CreateShortUrlAsync(string originalUrl);
     Task<UrlMapping?> GetByShortCodeAsync(string shortCode);
