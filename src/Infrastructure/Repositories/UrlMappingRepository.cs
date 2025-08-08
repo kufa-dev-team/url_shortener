@@ -42,12 +42,12 @@ namespace Infrastructure.Repositories
             return urlMapping;
         }
 
-        public async Task DeleteAsync(string ShortCode)
+        public async Task DeleteAsync(int Id)
         {
-            var urlMapping = await _dbSet.FirstOrDefaultAsync(u => u.OriginalUrl == ShortCode);
+            var urlMapping = await _dbSet.FirstOrDefaultAsync(u => u.Id== Id);
             if (urlMapping == null)
             {
-                _logger.LogWarning($"No UrlMapping found for LongUrl: {ShortCode}");
+                _logger.LogWarning($"No UrlMapping found for LongUrl: {Id}");
                 return;
             }
             //if it not null, remove it from the DbSet
@@ -93,24 +93,18 @@ namespace Infrastructure.Repositories
             return await _dbSet.ToListAsync();
         }
 
-        public async Task<UrlMapping?> GetByShortUrlAsync(string ShortCode)
+        public async Task<UrlMapping?> GetByIdUrlAsync(int Id)
         {
-            if (string.IsNullOrWhiteSpace(ShortCode))
+            if (Id <= 0)
             {
-                _logger.LogError("ShortCode cannot be null or empty.");
-                throw new ArgumentException("ShortCode cannot be null or empty.", nameof(ShortCode));
+                _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", Id);
+                throw new ArgumentOutOfRangeException(nameof(Id), "Id must be greater than zero.");
             }
-            return await _dbSet.Where(u => u.ShortCode == ShortCode)
+            
+            return await _dbSet.Where(u => u.Id == Id)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<UrlMapping?> GetByTitleAsync(string Title)
-        {
-            return await _dbSet
-                .FirstOrDefaultAsync(u => u.Title != null &&
-                    u.Title.Equals(Title, StringComparison.OrdinalIgnoreCase));
-
-        }
 
         public async Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit)
         {

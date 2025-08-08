@@ -13,17 +13,19 @@ namespace Infrastructure.Data
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
-        private readonly UrlMappingRepository _urlMappingRepository;
+        public IUrlMappingRepository UrlMappings{ get; }
+
+        public IUrlMappingRepository UrlMappingRepository => throw new NotImplementedException();
 
         //we use the repository to access the UrlMappingRepository methods
         //this is the repository that will be used to access the UrlMappingRepository methods
-        public IUrlMappingRepository UrlMappingRepository => _urlMappingRepository;
+        //public IUrlMappingRepository UrlMappingRepository => _urlMappingRepository;
 
         // Constructor to initialize the UnitOfWork with the DbContext and repositories
-        public UnitOfWork(ApplicationDbContext context, UrlMappingRepository urlMappingRepository)
+        public UnitOfWork(ApplicationDbContext context, IUrlMappingRepository urlMappingRepository)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _urlMappingRepository = urlMappingRepository ?? throw new ArgumentNullException(nameof(urlMappingRepository));
+            _context = context ;
+            UrlMappings = urlMappingRepository;
         }
 
         public async Task<int> SaveChangesAsync()
