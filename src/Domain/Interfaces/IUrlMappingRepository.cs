@@ -11,15 +11,14 @@ namespace Domain.Interfaces
     {
         //get tasks
         Task<IEnumerable<UrlMapping>> GetAllAsync();
-        Task<UrlMapping?> GetByShortUrlAsync(string ShortCode);
-        Task<UrlMapping?> GetByTitleAsync(string Title);
+        Task<UrlMapping?> GetByIdUrlAsync(int Id);
         Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit);
         Task<IEnumerable<UrlMapping>> GetActiveAsync();
 
         //add, update, delete tasks
         Task<UrlMapping> AddAsync(UrlMapping urlMapping);
         Task UpdateAsync(UrlMapping urlMapping);
-        Task DeleteAsync(String ShortCode);
+        Task DeleteAsync(int Id);
 
     }
 }
