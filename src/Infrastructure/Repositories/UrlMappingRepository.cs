@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Repositories
 {
-    public class UrlMappingRepository : IUrlMappingRepository
+    public class UrlMappingRepository : IUrlMappingRepository , IRepository<UrlMapping>
     {
         // The DbContext instance for database operations
         // The DbSet for UrlMapping entities
@@ -93,7 +93,7 @@ namespace Infrastructure.Repositories
             return await _dbSet.ToListAsync();
         }
 
-        public async Task<UrlMapping?> GetByIdUrlAsync(int Id)
+        public async Task<UrlMapping?> GetByIdAsync(int Id)
         {
             if (Id <= 0)
             {
@@ -123,7 +123,5 @@ namespace Infrastructure.Repositories
                 .AsNoTracking() // Better performance for read-only
                 .ToListAsync();
         }
-
-        
     }
 }
