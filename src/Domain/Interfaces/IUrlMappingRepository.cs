@@ -7,18 +7,11 @@ using Domain.Entities;
 
 namespace Domain.Interfaces
 {
-    public interface IUrlMappingRepository
+    public interface IUrlMappingRepository : IRepository<UrlMapping>
     {
-        //get tasks
-        Task<IEnumerable<UrlMapping>> GetAllAsync();
-        Task<UrlMapping?> GetByIdUrlAsync(int Id);
         Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit);
         Task<IEnumerable<UrlMapping>> GetActiveAsync();
 
-        //add, update, delete tasks
-        Task<UrlMapping> AddAsync(UrlMapping urlMapping);
-        Task UpdateAsync(UrlMapping urlMapping);
-        Task DeleteAsync(int Id);
 
     }
 }

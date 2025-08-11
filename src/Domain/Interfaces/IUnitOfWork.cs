@@ -5,16 +5,21 @@ using System.Threading.Tasks;
 
 namespace Domain.Interfaces
 {
-    public interface IUnitOfWork
+    public interface IUnitOfWork : IDisposable, IAsyncDisposable
     {
         // Define the repositories that are part of the unit of work
-        IUrlMappingRepository UrlMappingRepository { get; }
-        
+        IUrlMappingRepository UrlMappings { get; }
+
         //save changes to the database
         //save changes will return the number of affected rows or entities
-        Task<int> SaveChangesAsync();
-        // Dispose method to clean up resources
-        void Dispose();
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
+        Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+        Task CommitTransactionAsync(CancellationToken cancellationToken = default);
+        Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
+        Task CleanupTransactionAsync();
+
+        bool isActiveTransaction { get; }
+        
     }
 }

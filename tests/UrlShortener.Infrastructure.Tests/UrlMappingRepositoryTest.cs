@@ -177,7 +177,7 @@ public class UrlMappingRepositoryTest
         check if the count equals 2 */
     }
     [Fact]
-    public async Task GetByIdUrlAsync_ShouldReturnUrlMapping_WhenIdExists()
+    public async Task GetByIdAsync_ShouldReturnUrlMapping_WhenIdExists()
     {
         // Arrange
         var urlMapping = new UrlMapping
@@ -192,25 +192,25 @@ public class UrlMappingRepositoryTest
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByIdUrlAsync(1);
+        var result = await _repository.GetByIdAsync(1);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(urlMapping.Id, result.Id);
         /* here we add a new url mapping to the database and try to fetch it using its id
-        we expect GetByIdUrlAsync to return the correct entity */
+        we expect GetByIdAsync to return the correct entity */
     }
     [Fact]
-    public async Task GetByIdUrlAsync_ShouldReturnNull_WhenIdDoesNotExist()
+    public async Task GetByIdAsync_ShouldReturnNull_WhenIdDoesNotExist()
     {
         // Arrange
         int nonExistentId = 54; // Assuming this ID does not exist in the database
         // Act
-        var result = await _repository.GetByIdUrlAsync(nonExistentId);
+        var result = await _repository.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
-        /* this test checks the behavior of the GetByIdUrlAsync method when the 
+        /* this test checks the behavior of the GetByIdAsync method when the 
         requested id does not exist. it should return null */
     }
     [Fact]
@@ -244,6 +244,10 @@ public class UrlMappingRepositoryTest
         // Assert
         Assert.Single(activeMappings);
         Assert.Contains(activeUrlMapping, activeMappings);
+        /* Tests filtering logic for active UrlMappings.
+        Verifies only active records are returned with correct count.
+         here we add two url mappings one active and one inactive 
+        then we call the GetActiveAsync method and check if it returns only the active one */
 
     }
 
@@ -268,6 +272,8 @@ public class UrlMappingRepositoryTest
 
         // Assert
         Assert.Empty(activeMappings);
+        /* Tests the scenario where no active UrlMappings exist.
+        Verifies that the method returns an empty collection when all mappings are inactive.*/
     }
 
     [Fact]
@@ -311,6 +317,8 @@ public class UrlMappingRepositoryTest
         Assert.Equal(2, mostClickedMappings.Count());
         Assert.Contains(mostClickedMappings, x => x.Id == urlMapping2.Id);
         Assert.Contains(mostClickedMappings, x => x.Id == urlMapping1.Id);
+        /* Tests the retrieval of the most clicked UrlMappings.
+        Verifies that the method returns the correct number of mappings ordered by ClickCount.*/
     }
     [Fact]
     public async Task GetMostClickedAsync_ShouldReturnEmpty_WhenNoMappingsExist()
@@ -363,6 +371,8 @@ public class UrlMappingRepositoryTest
         // Assert
         Assert.Equal("limit", exception.ParamName);
         Assert.Equal("Limit must be greater than zero. (Parameter 'limit')", exception.Message);
+        /* Tests the behavior of GetMostClickedAsync when the limit is zero.
+        Verifies that it throws an ArgumentOutOfRangeException with the correct message.*/
     }
     [Fact]
     public async Task GetMostClickedAsync_ShouldThrowException_WhenLimitIsNegative()
@@ -374,6 +384,8 @@ public class UrlMappingRepositoryTest
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => _repository.GetMostClickedAsync(negativeLimit)
         );
+        /* Tests the behavior of GetMostClickedAsync when the limit is negative.
+        Verifies that it throws an ArgumentOutOfRangeException with the correct message.*/
     }
     [Fact]
     public async Task GetMostClickedAsync_ShouldReturnEmpty_WhenNoMappingsHaveClicks()
@@ -405,6 +417,8 @@ public class UrlMappingRepositoryTest
 
         // Assert
         Assert.Empty(mostClickedMappings);
+        /* Tests the scenario where no UrlMappings have clicks.
+        Verifies that the method returns an empty collection when all mappings have ClickCount of zero.*/
     }
     
     
