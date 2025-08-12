@@ -5,7 +5,7 @@ using Moq;
 using Infrastructure.Repositories;
 using Infrastructure.Data;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore; // Add this line or repApplicationDbContextlace with the correct namespace for ApplicationDbContext
+using Microsoft.EntityFrameworkCore;
 
 namespace UrlShortener.Infrastructure.Tests;
 
@@ -336,7 +336,7 @@ public class UrlMappingRepositoryTest
         var urlMapping1 = new UrlMapping
         {
             Id = 1,
-            ShortCode = "shortUrl",
+            ShortCode = "shortUrl1",
             OriginalUrl = "http://mostlicked1.com",
             ClickCount = 10,
             CreatedAt = DateTime.UtcNow
@@ -344,7 +344,7 @@ public class UrlMappingRepositoryTest
         var urlMapping2 = new UrlMapping
         {
             Id = 2,
-            ShortCode = "shortUrl",
+            ShortCode = "shortUrl2",
             OriginalUrl = "http://mostlicked2.com",
             ClickCount = 10,
             CreatedAt = DateTime.UtcNow
@@ -352,7 +352,7 @@ public class UrlMappingRepositoryTest
         var urlMapping3 = new UrlMapping
         {
             Id = 3,
-            ShortCode = "shortUrl",
+            ShortCode = "shortUrl3",
             OriginalUrl = "http://mostlicked3.com",
             ClickCount = 10,
             CreatedAt = DateTime.UtcNow
