@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
@@ -44,10 +41,10 @@ namespace Infrastructure.Repositories
 
         public async Task DeleteAsync(int Id)
         {
-            var urlMapping = await _dbSet.FirstOrDefaultAsync(u => u.Id== Id);
+            var urlMapping = await _dbSet.FirstOrDefaultAsync(u => u.Id == Id);
             if (urlMapping == null)
             {
-                _logger.LogWarning($"No UrlMapping found for LongUrl: {Id}");
+                _logger.LogWarning($"No UrlMapping found for Id: {Id}");
                 return;
             }
             //if it not null, remove it from the DbSet
