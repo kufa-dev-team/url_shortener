@@ -19,6 +19,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.6.8" />
+    <PackageReference Include="Scalar.AspNetCore.Microsoft" Version="2.6.8" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 
