@@ -6,8 +6,9 @@ namespace Domain.Interfaces
     public interface IUrlMappingRepository : IRepository<UrlMapping>
     {
         Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit);
+        Task<UrlMapping?> GetByShortCodeAsync(string shortCode);
         Task<IEnumerable<UrlMapping>> GetActiveAsync();
-
-
+        Task<string?> RedirectToOriginalUrlAsync(string shortCode);
+        Task<bool> UrlExistsAsync(string shortCode);
     }
 }

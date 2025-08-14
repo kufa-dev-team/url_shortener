@@ -1,10 +1,12 @@
 namespace API.DTOs.UrlMapping;
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 // Request DTOs
 public class CreateUrlMappingRequest
 {
+    
     /// <summary>
     /// The original URL to be shortened
     /// </summary>
