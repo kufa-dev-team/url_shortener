@@ -14,7 +14,7 @@ namespace Infrastructure.Data
 
     public class UnitOfWork : IUnitOfWork
 {
-    private IDbContextTransaction _currentTransaction;
+        private IDbContextTransaction _currentTransaction = null!;
     private readonly ApplicationDbContext _context;
     
     // Repository property
@@ -81,7 +81,7 @@ namespace Infrastructure.Data
         if (_currentTransaction != null)
         {
             await _currentTransaction.DisposeAsync();
-            _currentTransaction = null;
+            _currentTransaction = null!;
         }
     }
 

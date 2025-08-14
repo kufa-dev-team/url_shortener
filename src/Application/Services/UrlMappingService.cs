@@ -2,9 +2,6 @@ using Domain.Entities;
 using Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Win32.SafeHandles;
-using Application.Services;
-using Microsoft.EntityFrameworkCore.Storage;
 using StackExchange.Redis;
 
 namespace Application.Services
@@ -34,12 +31,12 @@ namespace Application.Services
             _urlMappingRepository = urlMappingRepository ?? throw new ArgumentNullException(nameof(urlMappingRepository));
             _shortCodeLength = shortCodeLength;
         }
-        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping urlMapping)
+        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping UrlMapping)
         {
-            if (urlMapping == null)
+            if (UrlMapping == null)
             {
                 _logger.LogError("Attempted to create a null UrlMapping.");
-                throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
+                throw new ArgumentNullException(nameof(UrlMapping), "UrlMapping cannot be null.");
             }
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -51,22 +48,28 @@ namespace Application.Services
                     shortCode = await _shortUrlGeneratorService.GenerateShortUrlAsync(_shortCodeLength);
                     isUnique = !await _urlMappingRepository.UrlExistsAsync(shortCode);
                 } while (!isUnique);
-
-                urlMapping.ShortCode = shortCode;
-                urlMapping.OriginalUrl = urlMapping.OriginalUrl.Trim();// Ensure no leading/trailing spaces
-                urlMapping.CreatedAt = DateTime.UtcNow;
-                urlMapping.UpdatedAt = DateTime.UtcNow;
-                urlMapping.ClickCount = 0;
-                urlMapping.IsActive = true; 
+                var urlMapping = new UrlMapping
+                {
+                    OriginalUrl = UrlMapping.OriginalUrl.Trim(), // Ensure no leading/trailing spaces
+                    ShortCode = shortCode,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    ExpiresAt = UrlMapping.ExpiresAt,
+                    Title = UrlMapping.Title,
+                    Description = UrlMapping.Description,
+                    ClickCount = 0,
+                    IsActive = true
+                };
 
                 if (urlMapping.ExpiresAt.HasValue && urlMapping.ExpiresAt.Value <= DateTime.UtcNow)
                 {
                     _logger.LogError("Expiration date must be in the future.");
                     throw new ArgumentException("Expiration date must be in the future.", nameof(urlMapping.ExpiresAt));
                 }
-                await _redis.StringSetAsync($"url:{shortCode}", urlMapping.OriginalUrl, TimeSpan.FromDays(30));
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(urlMapping);
                 await _unitOfWork.SaveChangesAsync();
+                
+                await _redis.StringSetAsync($"url:{shortCode}", urlMapping.OriginalUrl, TimeSpan.FromDays(30));
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
             }
