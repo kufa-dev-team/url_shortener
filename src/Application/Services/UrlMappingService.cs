@@ -31,45 +31,57 @@ namespace Application.Services
             _urlMappingRepository = urlMappingRepository ?? throw new ArgumentNullException(nameof(urlMappingRepository));
             _shortCodeLength = shortCodeLength;
         }
-        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping UrlMapping)
+        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping UrlMapping,string? customShortCode = null)
         {
             if (UrlMapping == null)
             {
                 _logger.LogError("Attempted to create a null UrlMapping.");
                 throw new ArgumentNullException(nameof(UrlMapping), "UrlMapping cannot be null.");
             }
+            UrlMapping.CreatedAt = DateTime.UtcNow;
+            UrlMapping.UpdatedAt = DateTime.UtcNow;
+            UrlMapping.IsActive = true;
+            UrlMapping.ClickCount = 0;
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                string shortCode;
-                bool isUnique;
-                do
+                if (string.IsNullOrWhiteSpace(customShortCode))
                 {
-                    shortCode = await _shortUrlGeneratorService.GenerateShortUrlAsync(_shortCodeLength);
-                    isUnique = !await _urlMappingRepository.UrlExistsAsync(shortCode);
-                } while (!isUnique);
-                var urlMapping = new UrlMapping
+                    string shortCode;
+                    bool isUnique;
+                    do
+                    {
+                        shortCode = await _shortUrlGeneratorService.GenerateShortUrlAsync(_shortCodeLength);
+                        isUnique = !await _urlMappingRepository.UrlExistsAsync(shortCode);
+                    } while (!isUnique);  
+                    UrlMapping.ShortCode = shortCode;   
+                }
+                else
                 {
-                    OriginalUrl = UrlMapping.OriginalUrl.Trim(), // Ensure no leading/trailing spaces
-                    ShortCode = shortCode,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    ExpiresAt = UrlMapping.ExpiresAt,
-                    Title = UrlMapping.Title,
-                    Description = UrlMapping.Description,
-                    ClickCount = 0,
-                    IsActive = true
-                };
+                    // Validate custom short code
+                    if (customShortCode.Length != _shortCodeLength)
+                    {
+                        _logger.LogError("Custom short code must be {Length} characters long.", _shortCodeLength);
+                        throw new ArgumentException($"Custom short code must be {_shortCodeLength} characters long.", nameof(customShortCode));
+                    }
+                    if (await _urlMappingRepository.UrlExistsAsync(customShortCode))
+                    {
+                        _logger.LogError("Custom short code '{CustomShortCode}' already exists.", customShortCode);
+                        throw new InvalidOperationException($"Custom short code '{customShortCode}' already exists.");
+                    }
+                    UrlMapping.ShortCode = customShortCode;
+                }
+                           
 
-                if (urlMapping.ExpiresAt.HasValue && urlMapping.ExpiresAt.Value <= DateTime.UtcNow)
+                if (UrlMapping.ExpiresAt.HasValue && UrlMapping.ExpiresAt.Value <= DateTime.UtcNow)
                 {
                     _logger.LogError("Expiration date must be in the future.");
-                    throw new ArgumentException("Expiration date must be in the future.", nameof(urlMapping.ExpiresAt));
+                    throw new ArgumentException("Expiration date must be in the future.", nameof(UrlMapping.ExpiresAt));
                 }
-                var createdUrlMapping = await _urlMappingRepository.AddAsync(urlMapping);
+                var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
                 await _unitOfWork.SaveChangesAsync();
                 
-                await _redis.StringSetAsync($"url:{shortCode}", urlMapping.OriginalUrl, TimeSpan.FromDays(30));
+                await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(30));
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
             }
@@ -96,9 +108,7 @@ namespace Application.Services
             {
                 _logger.LogWarning("UrlMapping with Id {Id} not found.", id);
                 throw new KeyNotFoundException($"UrlMapping with Id {id} not found.");
-            }
-                // Remove the URL mapping from Redis cache
-                
+            }                
                 // Delete the URL mapping from the database
                 await _urlMappingRepository.DeleteAsync(id);
                 await _unitOfWork.SaveChangesAsync();
@@ -147,7 +157,7 @@ namespace Application.Services
         public async Task<UrlMapping?> GetByIdAsync(int Id)
         {
 
-            if (Id <= 0)
+            if (Id < 0)
             {
                 _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", Id);
                 throw new ArgumentOutOfRangeException(nameof(Id), "Id must be greater than zero.");
@@ -205,40 +215,32 @@ namespace Application.Services
             if (string.IsNullOrWhiteSpace(shortCode))
             {
                 _logger.LogError("Short code cannot be null or empty.");
-                throw new ArgumentException("Short code cannot be null or empty.", nameof(shortCode));
+                throw new ArgumentException("Invalid short code", nameof(shortCode));
             }
-            // Check if the URL is cached in Redis
-            string? longUrl = await _redis.StringGetAsync($"url:{shortCode}");
 
-            if (longUrl != null) 
+            var urlMapping = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
+            if (urlMapping == null || !urlMapping.IsActive)
             {
-                return longUrl; // Cache hit (no DB query needed)
+                _logger.LogWarning("Invalid or inactive short code: {ShortCode}", shortCode);
+                throw new KeyNotFoundException("URL not found");
             }
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                string? originalUrl = await _urlMappingRepository.RedirectToOriginalUrlAsync(shortCode);
-                await _unitOfWork.SaveChangesAsync(); // Ensure changes are saved after incrementing click count
-                await _redis.StringSetAsync($"url:{shortCode}", originalUrl, TimeSpan.FromDays(30));
-                return originalUrl ?? throw new KeyNotFoundException("Short code not found.");
-            }
-            /*
-                The (?? throw new KeyNotFoundException) line throws the exception, but does not log it.
-                The (catch KeyNotFoundException) block ensures you log the failure (e.g., for monitoring, debugging, or analytics).
-                Without logging, we'd have no record of how often invalid short codes are requested.
-            */
-            catch (KeyNotFoundException knfEx)
-            {
-                _logger.LogWarning(knfEx, "Short code not found: {ShortCode}.", shortCode);
-                throw;
+                // Atomic counter update
+                await _urlMappingRepository.IncrementClickCountAsync(urlMapping.Id);
+                await _unitOfWork.CommitTransactionAsync();
+                return urlMapping.OriginalUrl;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error redirecting to original URL for short code: {ShortCode}.", shortCode);
-                throw;
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error processing redirect for {ShortCode}", shortCode);
+                throw; // Re-throw for controller handling
             }
         }
 
-        public async Task UpdateUrlAsync(UrlMapping urlMapping)
+        public async Task UpdateUrlAsync(UrlMapping urlMapping , string? customShortCode = null)
         {
             if (urlMapping == null)
             {
@@ -246,22 +248,43 @@ namespace Application.Services
                 throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
             }
             var existingMapping = await _urlMappingRepository.GetByIdAsync(urlMapping.Id) ?? throw new KeyNotFoundException("UrlMapping not found.");
+            existingMapping.Title = urlMapping.Title;
+            existingMapping.Description = urlMapping.Description;
+            existingMapping.OriginalUrl = urlMapping.OriginalUrl;
+            existingMapping.ExpiresAt = urlMapping.ExpiresAt;
+            existingMapping.IsActive = urlMapping.IsActive;
+            existingMapping.UpdatedAt = DateTime.UtcNow;
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
-                await _urlMappingRepository.UpdateAsync(urlMapping);
-                urlMapping.UpdatedAt = DateTime.UtcNow;
+                await _urlMappingRepository.UpdateAsync(existingMapping);
+                if (!string.IsNullOrWhiteSpace(customShortCode))
+                {
+                    if (customShortCode.Length != _shortCodeLength)
+                    {
+                        _logger.LogError("Custom short code must be {Length} characters long.", _shortCodeLength);
+                        throw new ArgumentException($"Custom short code must be {_shortCodeLength} characters long.", nameof(customShortCode));
+                    }
+                    if (await _urlMappingRepository.UrlExistsAsync(customShortCode) && customShortCode != existingMapping.ShortCode)
+                    {
+                        _logger.LogError("Custom short code '{CustomShortCode}' already exists.", customShortCode);
+                        throw new InvalidOperationException($"Custom short code '{customShortCode}' already exists.");
+                    }
+                    existingMapping.ShortCode = customShortCode;
+                }
                 await _unitOfWork.SaveChangesAsync();
                 
+                var redisKey = $"url:{existingMapping.ShortCode}";
                 await _redis.StringSetAsync(
-                    key: $"url:{existingMapping.ShortCode}",
-                    value: urlMapping.OriginalUrl.Trim(), // Ensure no leading/trailing spaces
-                    expiry: TimeSpan.FromDays(30)
-                );
-                //delete the old short code from Redis if it has changed
-                if (existingMapping.ShortCode != urlMapping.ShortCode)
+                    redisKey,
+                    existingMapping.OriginalUrl.Trim(),
+                    TimeSpan.FromDays(30));
+
+                // Only delete old key if short code changed
+                if (!string.IsNullOrWhiteSpace(customShortCode) && 
+                    existingMapping.ShortCode != urlMapping.ShortCode)
                 {
-                    await _redis.KeyDeleteAsync($"url:{existingMapping.ShortCode}");
+                    await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");
                 }
 
                 await _unitOfWork.CommitTransactionAsync();

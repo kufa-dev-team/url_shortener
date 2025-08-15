@@ -8,7 +8,8 @@ namespace Domain.Interfaces
         Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit);
         Task<UrlMapping?> GetByShortCodeAsync(string shortCode);
         Task<IEnumerable<UrlMapping>> GetActiveAsync();
-        Task<string?> RedirectToOriginalUrlAsync(string shortCode);
         Task<bool> UrlExistsAsync(string shortCode);
+        Task IncrementClickCountAsync(int id);
+
     }
 }

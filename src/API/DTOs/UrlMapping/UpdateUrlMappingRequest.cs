@@ -10,6 +10,7 @@ namespace API.DTOs.UrlMapping
     {
     [Required][Range(1, int.MaxValue)]
     public int Id { get; set; }
+    public string? CustomShortCode { get; set; }
 
     [MaxLength(200, ErrorMessage = "Title cannot exceed 200 characters")]
     public string? Title { get; set; }
@@ -18,7 +19,8 @@ namespace API.DTOs.UrlMapping
     public string? Description { get; set; }
 
     [Url]
-    public required string OriginalUrl { get; set; }
+    public required string? OriginalUrl { get; set; } = null!;
+    public bool IsActive { get; set; } = true;
 
     public DateTime? ExpiresAt { get; set; }
 
