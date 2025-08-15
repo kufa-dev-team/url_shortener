@@ -26,12 +26,12 @@ namespace Infrastructure.Repositories
         }
 
         // Implement the methods defined in the IUrlMappingRepository interface
-        public async Task<UrlMapping> AddAsync(UrlMapping urlMapping)
+        public async Task<UrlMapping> AddAsync(UrlMapping entity)
         {
 
             // Add the UrlMapping entity to the DbSet and return the added entity
-            await _dbSet.AddAsync(urlMapping);
-            return urlMapping;
+            var AddedUrl = await _dbSet.AddAsync(entity);
+            return AddedUrl.Entity;
         }
 
         public async Task DeleteAsync(int id)
@@ -39,7 +39,7 @@ namespace Infrastructure.Repositories
             //if it not null, remove it from the DbSet
             await _context.UrlMappings
             .Where(u => u.Id == id)
-            .ExecuteDeleteAsync(); 
+            .ExecuteDeleteAsync();
         }
 
         public Task UpdateAsync(UrlMapping urlMapping)
@@ -103,24 +103,19 @@ namespace Infrastructure.Repositories
                 .Where(u => u.ShortCode == shortCode)
                 .FirstOrDefaultAsync();
         }
-        public async Task<string?> RedirectToOriginalUrlAsync(string shortCode)
-        {
-            var urlMapping = await GetByShortCodeAsync(shortCode);
-            if (urlMapping == null)
-            {
-                _logger.LogWarning($"No URL mapping found for short code: {shortCode}");
-                return null;
-            }
-
-            // Increment the click count
-            urlMapping.ClickCount++;
-            await UpdateAsync(urlMapping);
-            return urlMapping.OriginalUrl;
-        }
         public async Task<bool> UrlExistsAsync(string shortCode)
         {
             // Check if a URL mapping with the given short code exists
             return await _dbSet.AnyAsync(u => u.ShortCode == shortCode);
         }
+
+        public async Task IncrementClickCountAsync(int id)
+        {
+            await _context.UrlMappings
+                .Where(u => u.Id == id)
+                .ExecuteUpdateAsync(u =>
+                    u.SetProperty(x => x.ClickCount, x => x.ClickCount + 1));
+        }
+
     }
 }

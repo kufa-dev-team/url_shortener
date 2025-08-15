@@ -56,6 +56,7 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                
                     b.Property<string>("Title")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -68,6 +69,7 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ExpiresAt");
 
                     b.HasIndex("OriginalUrl");
+                    
 
                     b.HasIndex("ShortCode")
                         .IsUnique()

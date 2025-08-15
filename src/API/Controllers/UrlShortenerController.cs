@@ -22,28 +22,47 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(CreateUrlMappingResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<CreateUrlMappingResponse>> CreateShortUrl([FromBody] CreateUrlMappingRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var urlMapping = new UrlMapping
+            try
             {
-                OriginalUrl = request.OriginalUrl,
-                ExpiresAt = request.ExpiresAt,
-                Title = request.Title,
-                Description = request.Description
-            };
-            await _urlMappingService.CreateUrlMappingAsync(urlMapping);
-            return CreatedAtAction
-            (
-                nameof(CreateShortUrl),
-                new { id = urlMapping.Id },
-                new CreateUrlMappingResponse
+                var urlMapping = new UrlMapping
                 {
-                    Id = urlMapping.Id,
-                    ShortCode = urlMapping.ShortCode,
-                    ExpiresAt = urlMapping.ExpiresAt
-                }
-            );
+                    OriginalUrl = request.OriginalUrl,
+                    ExpiresAt = request.ExpiresAt,
+                    Title = request.Title,
+                    Description = request.Description,
+                };
+                var CreatedUrl = await _urlMappingService.CreateUrlMappingAsync(urlMapping, request.CustomShortCode);
+                return CreatedAtAction
+                (
+                    nameof(GetUrlById),
+                    new { id = CreatedUrl.Id },
+                    new CreateUrlMappingResponse
+                    {
+                        Id = CreatedUrl.Id,
+                        ShortCode = CreatedUrl.ShortCode,
+                        OriginalUrl = CreatedUrl.OriginalUrl,
+                        ShortUrl = $"https://short.ly/{CreatedUrl.ShortCode}",
+                        CreatedAt = CreatedUrl.CreatedAt,
+                        UpdatedAt = CreatedUrl.UpdatedAt,
+                        Title = CreatedUrl.Title,
+                        Description = CreatedUrl.Description,
+                        ExpiresAt = CreatedUrl.ExpiresAt,
+                        IsActive = CreatedUrl.IsActive,
+                        ClickCount = CreatedUrl.ClickCount
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating short URL");
+                return StatusCode(500, "Internal server error");
+            }
+
         }
         [HttpDelete]
         public async Task<IActionResult> DeleteUrlMapping(int Id)
@@ -70,27 +89,20 @@ namespace API.Controllers
             {
                 return NotFound($"URL with ID {request.Id} not found.");
             }
-            UrlMapping urlMapping = new UrlMapping
-            {
-                Id = request.Id,
-                Title = request.Title,
-                Description = request.Description,
-                OriginalUrl = request.OriginalUrl,
-                ExpiresAt = request.ExpiresAt,
-                // Preserve existing important fields
-                ShortCode = existingUrl.ShortCode,
-                CreatedAt = existingUrl.CreatedAt,
-                UpdatedAt = DateTime.UtcNow,
-                ClickCount = existingUrl.ClickCount,
-                IsActive = existingUrl.IsActive
+            existingUrl.Title = request.Title;
+            existingUrl.Description = request.Description;
+            existingUrl.OriginalUrl = request.OriginalUrl ?? existingUrl.OriginalUrl;
+            existingUrl.ExpiresAt = request.ExpiresAt;
+            existingUrl.IsActive = request.IsActive;
+            existingUrl.UpdatedAt = DateTime.UtcNow;
 
-            };
-            await _urlMappingService.UpdateUrlAsync(urlMapping);
+            await _urlMappingService.UpdateUrlAsync(existingUrl, request.CustomShortCode);
             return Ok(new UrlMappingResponse
             {
                 Id = existingUrl.Id,
                 ShortCode = existingUrl.ShortCode,
                 OriginalUrl = existingUrl.OriginalUrl,
+                ShortUrl = $"https://{existingUrl.ShortCode}",
                 Title = existingUrl.Title,
                 Description = existingUrl.Description,
                 ExpiresAt = existingUrl.ExpiresAt,
@@ -99,7 +111,7 @@ namespace API.Controllers
             });
 
         }
-        [HttpGet]
+        [HttpGet("GetAll")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetAllUrls()
         {
             var urlMappings = await _urlMappingService.GetAllUrlsAsync();
@@ -117,19 +129,20 @@ namespace API.Controllers
                 Description = um.Description
             }));
         }
-        [HttpGet("/{id}")]
-        public async Task<ActionResult<UrlMappingResponse>> GetUrlById(int Id)
+        [HttpGet("GetById/{id}")]
+        public async Task<ActionResult<UrlMappingResponse>> GetUrlById(int id)
         {
-            var existingUrl = await _urlMappingService.GetByIdAsync(Id);
+            var existingUrl = await _urlMappingService.GetByIdAsync(id);
             if (existingUrl == null)
             {
-                return NotFound($"URL with ID {Id} not found.");
+                return NotFound($"URL with ID {id} not found.");
             }
             return Ok(new UrlMappingResponse
             {
                 Id = existingUrl.Id,
                 ShortCode = existingUrl.ShortCode,
                 OriginalUrl = existingUrl.OriginalUrl,
+                ShortUrl = $"https://{existingUrl.ShortCode}",
                 Title = existingUrl.Title,
                 Description = existingUrl.Description,
                 ExpiresAt = existingUrl.ExpiresAt,
@@ -137,7 +150,7 @@ namespace API.Controllers
                 ClickCount = existingUrl.ClickCount
             });
         }
-        [HttpGet("/MostClicked/{limit}")]
+        [HttpGet("MostClicked/{limit}")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetMostClickedUrl(int limit)
         {
             if (limit <= 0 || limit > 100)
@@ -151,7 +164,7 @@ namespace API.Controllers
                 {
                     Id = um.Id,
                     OriginalUrl = um.OriginalUrl,
-                    ShortUrl = $"/{um.ShortCode}",
+                    ShortUrl = $"https://{um.ShortCode}",
                     ShortCode = um.ShortCode,
                     Title = um.Title,
                     Description = um.Description,
@@ -180,7 +193,7 @@ namespace API.Controllers
                 {
                     Id = um.Id,
                     OriginalUrl = um.OriginalUrl,
-                    ShortUrl = $"/{um.ShortCode}",
+                    ShortUrl = $"https://{um.ShortCode}",
                     ShortCode = um.ShortCode,
                     Title = um.Title,
                     Description = um.Description,
@@ -198,8 +211,8 @@ namespace API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        [HttpGet("{shortCode}")]
-        public async Task<IActionResult> RedirectToOriginalUrl(string shortCode)
+        [HttpGet("RedirectRoOriginalUrl/{shortCode}")]
+        public async Task<ActionResult<String>> RedirectToOriginalUrl(string shortCode)
         {
             try
             {
@@ -208,7 +221,7 @@ namespace API.Controllers
                 if (string.IsNullOrEmpty(originalUrl))
                     return NotFound("Short URL not found");
                 
-                return Redirect(originalUrl);
+                return originalUrl;
             }
             catch (Exception ex)
             {
