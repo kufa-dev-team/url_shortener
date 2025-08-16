@@ -46,7 +46,7 @@ namespace API.Controllers
                         Id = CreatedUrl.Id,
                         ShortCode = CreatedUrl.ShortCode,
                         OriginalUrl = CreatedUrl.OriginalUrl,
-                        ShortUrl = $"https://short.ly/{CreatedUrl.ShortCode}",
+                        ShortUrl = $"https://ShortUrl/{CreatedUrl.ShortCode}",
                         CreatedAt = CreatedUrl.CreatedAt,
                         UpdatedAt = CreatedUrl.UpdatedAt,
                         Title = CreatedUrl.Title,
@@ -217,10 +217,10 @@ namespace API.Controllers
             try
             {
                 var originalUrl = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-                
+
                 if (string.IsNullOrEmpty(originalUrl))
                     return NotFound("Short URL not found");
-                
+
                 return originalUrl;
             }
             catch (Exception ex)
@@ -229,5 +229,13 @@ namespace API.Controllers
                 return StatusCode(500, "Redirection error");
             }
         }
+
+        [HttpPost("DeactivateExpired")]
+        public async Task<IActionResult> DeactivateExpired()
+        {
+            await _urlMappingService.DeactivateExpiredUrlsAsync();
+            return NoContent();
+        }
+        
     }
 }

@@ -34,12 +34,17 @@ namespace Infrastructure.Repositories
             return AddedUrl.Entity;
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(int Id)
         {
+            var urlMapping = await _dbSet.FirstOrDefaultAsync(u => u.Id == Id);
+            if (urlMapping == null)
+            {
+                _logger.LogWarning($"No UrlMapping found for Id: {Id}");
+                return;
+            }
             //if it not null, remove it from the DbSet
-            await _context.UrlMappings
-            .Where(u => u.Id == id)
-            .ExecuteDeleteAsync();
+            _dbSet.Remove(urlMapping);
+            return;
         }
 
         public Task UpdateAsync(UrlMapping urlMapping)
@@ -85,7 +90,11 @@ namespace Infrastructure.Repositories
 
         public async Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit)
         {
-
+            if (limit <= 0)
+            {
+                _logger.LogError("Invalid limit value: {Limit}. It must be greater than zero.", limit);
+                throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be greater than zero.");
+            }
             // Fetch the most clicked URLs, ordered by ClickCount in descending order
             // and limited to the specified number of results
             return await _dbSet
@@ -115,6 +124,13 @@ namespace Infrastructure.Repositories
                 .Where(u => u.Id == id)
                 .ExecuteUpdateAsync(u =>
                     u.SetProperty(x => x.ClickCount, x => x.ClickCount + 1));
+        }
+
+        public async Task<IEnumerable<UrlMapping>> GetExpiredUrlsAsync()
+        {
+            return await _context.UrlMappings
+                .Where(u => u.IsActive && u.ExpiresAt < DateTime.UtcNow)
+                .ToListAsync();
         }
 
     }
