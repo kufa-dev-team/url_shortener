@@ -31,7 +31,7 @@ namespace Application.Services
             _urlMappingRepository = urlMappingRepository ?? throw new ArgumentNullException(nameof(urlMappingRepository));
             _shortCodeLength = shortCodeLength;
         }
-        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping UrlMapping,string? customShortCode = null)
+        public async Task<UrlMapping> CreateUrlMappingAsync(UrlMapping UrlMapping, string? customShortCode = null)
         {
             if (UrlMapping == null)
             {
@@ -53,8 +53,8 @@ namespace Application.Services
                     {
                         shortCode = await _shortUrlGeneratorService.GenerateShortUrlAsync(_shortCodeLength);
                         isUnique = !await _urlMappingRepository.UrlExistsAsync(shortCode);
-                    } while (!isUnique);  
-                    UrlMapping.ShortCode = shortCode;   
+                    } while (!isUnique);
+                    UrlMapping.ShortCode = shortCode;
                 }
                 else
                 {
@@ -71,7 +71,7 @@ namespace Application.Services
                     }
                     UrlMapping.ShortCode = customShortCode;
                 }
-                           
+
 
                 if (UrlMapping.ExpiresAt.HasValue && UrlMapping.ExpiresAt.Value <= DateTime.UtcNow)
                 {
@@ -80,7 +80,7 @@ namespace Application.Services
                 }
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
                 await _unitOfWork.SaveChangesAsync();
-                
+
                 await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(30));
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
@@ -104,11 +104,11 @@ namespace Application.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
                 var urlMapping = await _urlMappingRepository.GetByIdAsync(id);
-            if (urlMapping == null)
-            {
-                _logger.LogWarning("UrlMapping with Id {Id} not found.", id);
-                throw new KeyNotFoundException($"UrlMapping with Id {id} not found.");
-            }                
+                if (urlMapping == null)
+                {
+                    _logger.LogWarning("UrlMapping with Id {Id} not found.", id);
+                    throw new KeyNotFoundException($"UrlMapping with Id {id} not found.");
+                }
                 // Delete the URL mapping from the database
                 await _urlMappingRepository.DeleteAsync(id);
                 await _unitOfWork.SaveChangesAsync();
@@ -240,7 +240,7 @@ namespace Application.Services
             }
         }
 
-        public async Task UpdateUrlAsync(UrlMapping urlMapping , string? customShortCode = null)
+        public async Task UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null)
         {
             if (urlMapping == null)
             {
@@ -273,7 +273,7 @@ namespace Application.Services
                     existingMapping.ShortCode = customShortCode;
                 }
                 await _unitOfWork.SaveChangesAsync();
-                
+
                 var redisKey = $"url:{existingMapping.ShortCode}";
                 await _redis.StringSetAsync(
                     redisKey,
@@ -281,7 +281,7 @@ namespace Application.Services
                     TimeSpan.FromDays(30));
 
                 // Only delete old key if short code changed
-                if (!string.IsNullOrWhiteSpace(customShortCode) && 
+                if (!string.IsNullOrWhiteSpace(customShortCode) &&
                     existingMapping.ShortCode != urlMapping.ShortCode)
                 {
                     await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");
@@ -311,6 +311,26 @@ namespace Application.Services
             {
                 _logger.LogError(ex, "Error checking if URL exists for short code: {ShortCode}.", shortCode);
                 throw;
+            }
+        }
+        public async Task DeactivateExpiredUrlsAsync()
+        {
+            try
+            {
+                // Get all URLs that are active but expired
+                var expiredUrls = await _urlMappingRepository.GetExpiredUrlsAsync();
+
+                foreach (var url in expiredUrls)
+                {
+                    url.IsActive = false;
+                    await _urlMappingRepository.UpdateAsync(url);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deactivating expired URLs");
             }
         }
     }

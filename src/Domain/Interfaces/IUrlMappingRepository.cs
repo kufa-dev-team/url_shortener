@@ -10,6 +10,6 @@ namespace Domain.Interfaces
         Task<IEnumerable<UrlMapping>> GetActiveAsync();
         Task<bool> UrlExistsAsync(string shortCode);
         Task IncrementClickCountAsync(int id);
-
+        Task<IEnumerable<UrlMapping>> GetExpiredUrlsAsync();
     }
 }
