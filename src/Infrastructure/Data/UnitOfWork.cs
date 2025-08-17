@@ -14,7 +14,7 @@ namespace Infrastructure.Data
 
     public class UnitOfWork : IUnitOfWork
 {
-        private IDbContextTransaction _currentTransaction = null!;
+    private IDbContextTransaction _currentTransaction = null!;
     private readonly ApplicationDbContext _context;
     
     // Repository property

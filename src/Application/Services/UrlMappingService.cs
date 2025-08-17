@@ -3,6 +3,8 @@ using Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace Application.Services
 {
@@ -240,38 +242,77 @@ namespace Application.Services
             }
         }
 
-        public async Task UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null)
+        public async Task<UrlMapping> UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null)
         {
             if (urlMapping == null)
             {
                 _logger.LogError("Attempted to update a null UrlMapping.");
                 throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
             }
+            
             var existingMapping = await _urlMappingRepository.GetByIdAsync(urlMapping.Id) ?? throw new KeyNotFoundException("UrlMapping not found.");
-            existingMapping.Title = urlMapping.Title;
-            existingMapping.Description = urlMapping.Description;
-            existingMapping.OriginalUrl = urlMapping.OriginalUrl;
-            existingMapping.ExpiresAt = urlMapping.ExpiresAt;
-            existingMapping.IsActive = urlMapping.IsActive;
+            
+            if (!string.IsNullOrWhiteSpace(customShortCode))
+            {
+                if (customShortCode.Length != _shortCodeLength)
+                {
+                    _logger.LogError("Custom short code must be {Length} characters long.", _shortCodeLength);
+                    throw new ArgumentException($"Custom short code must be {_shortCodeLength} characters long.", nameof(customShortCode));
+                }
+                if (await _urlMappingRepository.UrlExistsAsync(customShortCode) && customShortCode != existingMapping.ShortCode)
+                {
+                    _logger.LogError("Custom short code '{CustomShortCode}' already exists.", customShortCode);
+                    throw new InvalidOperationException($"Custom short code '{customShortCode}' already exists.");
+                }
+                existingMapping.ShortCode = customShortCode;
+            }
+            
+            if (!string.IsNullOrWhiteSpace(urlMapping.Description))
+                existingMapping.Description = urlMapping.Description;
+
+            if (!string.IsNullOrWhiteSpace(urlMapping.OriginalUrl))
+            {
+                //here we are checking if the Url is valid 
+                /*the if statement involves two parts: 
+
+                First part:
+                [!Uri.TryCreate(urlMapping.OriginalUrl, UriKind.Absolute, out Uri? uriResult]
+                we are using Uri.TryCreate to create new uri object(Uniform Resource Identifier object) It is a .NET class 
+                that represents a web address or resource identifier. It parses a string It returns 
+                true if the is a valid Url, false if the string is not a valid URI.
+
+                out Uri? uriResult : mean that if the process succeeded save the uri object in uriResult
+
+                seconde part:
+                uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps)
+                the .Schema mean the protocol(HTTP/HTTPS) and Uri.UriSchemeHttp means the the https protocol
+                and Uri.UriSchemeHttps means the https protocol 
+
+                As a result the if statement will mean :
+                IF (the string is not a valid url) Or (the url is not one of these protocol(HTTP/HTTPS) )
+                */
+                if (!Uri.TryCreate(urlMapping.OriginalUrl, UriKind.Absolute, out Uri? uriResult)
+                    || (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+                {
+                    throw new ArgumentException("OriginalUrl must be a valid HTTP/HTTPS URL, It must begin with https:// Or http://", nameof(urlMapping.OriginalUrl));
+                }
+                existingMapping.OriginalUrl = urlMapping.OriginalUrl;
+            }
+            
+            if (urlMapping.ExpiresAt != null)
+            {
+                if (urlMapping.ExpiresAt > DateTime.UtcNow)
+                    existingMapping.ExpiresAt = urlMapping.ExpiresAt;
+                else
+                    throw new ArgumentException("Expiration date must be in the future.");
+            }
+            
             existingMapping.UpdatedAt = DateTime.UtcNow;
+
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
                 await _urlMappingRepository.UpdateAsync(existingMapping);
-                if (!string.IsNullOrWhiteSpace(customShortCode))
-                {
-                    if (customShortCode.Length != _shortCodeLength)
-                    {
-                        _logger.LogError("Custom short code must be {Length} characters long.", _shortCodeLength);
-                        throw new ArgumentException($"Custom short code must be {_shortCodeLength} characters long.", nameof(customShortCode));
-                    }
-                    if (await _urlMappingRepository.UrlExistsAsync(customShortCode) && customShortCode != existingMapping.ShortCode)
-                    {
-                        _logger.LogError("Custom short code '{CustomShortCode}' already exists.", customShortCode);
-                        throw new InvalidOperationException($"Custom short code '{customShortCode}' already exists.");
-                    }
-                    existingMapping.ShortCode = customShortCode;
-                }
                 await _unitOfWork.SaveChangesAsync();
 
                 var redisKey = $"url:{existingMapping.ShortCode}";
@@ -282,12 +323,13 @@ namespace Application.Services
 
                 // Only delete old key if short code changed
                 if (!string.IsNullOrWhiteSpace(customShortCode) &&
-                    existingMapping.ShortCode != urlMapping.ShortCode)
+                    customShortCode != existingMapping.ShortCode)
                 {
-                    await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");
+                    await _redis.KeyDeleteAsync($"url:{existingMapping.ShortCode}");
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
+                return existingMapping;  // Return the updated entity
             }
             catch (Exception ex)
             {

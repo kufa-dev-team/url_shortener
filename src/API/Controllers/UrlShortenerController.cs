@@ -89,25 +89,25 @@ namespace API.Controllers
             {
                 return NotFound($"URL with ID {request.Id} not found.");
             }
-            existingUrl.Title = request.Title;
-            existingUrl.Description = request.Description;
+            existingUrl.Title = request.Title ?? existingUrl.Title;
+            existingUrl.Description = request.Description ?? existingUrl.Description;
             existingUrl.OriginalUrl = request.OriginalUrl ?? existingUrl.OriginalUrl;
             existingUrl.ExpiresAt = request.ExpiresAt;
             existingUrl.IsActive = request.IsActive;
             existingUrl.UpdatedAt = DateTime.UtcNow;
 
-            await _urlMappingService.UpdateUrlAsync(existingUrl, request.CustomShortCode);
+            var updatedUrl = await _urlMappingService.UpdateUrlAsync(existingUrl, request.CustomShortCode);
             return Ok(new UrlMappingResponse
             {
-                Id = existingUrl.Id,
-                ShortCode = existingUrl.ShortCode,
-                OriginalUrl = existingUrl.OriginalUrl,
-                ShortUrl = $"https://{existingUrl.ShortCode}",
-                Title = existingUrl.Title,
-                Description = existingUrl.Description,
-                ExpiresAt = existingUrl.ExpiresAt,
-                IsActive = existingUrl.IsActive,
-                ClickCount = existingUrl.ClickCount
+                Id = updatedUrl.Id,
+                ShortCode = updatedUrl.ShortCode,
+                OriginalUrl = updatedUrl.OriginalUrl,
+                ShortUrl = $"https://{updatedUrl.ShortCode}",
+                Title = updatedUrl.Title,
+                Description = updatedUrl.Description,
+                ExpiresAt = updatedUrl.ExpiresAt,
+                IsActive = updatedUrl.IsActive,
+                ClickCount = updatedUrl.ClickCount
             });
 
         }

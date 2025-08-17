@@ -13,6 +13,6 @@ public interface IUrlMappingService
     Task<IEnumerable<UrlMapping>> GetAllUrlsAsync();
     Task<string> RedirectToOriginalUrlAsync(string shortCode);
     Task DeleteUrlAsync(int id);
-    Task UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null);
+    Task<UrlMapping> UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null);
     Task DeactivateExpiredUrlsAsync();
 }

@@ -17,8 +17,6 @@ namespace API.DTOs.UrlMapping
 
     [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
     public string? Description { get; set; }
-
-    [Url]
     public required string? OriginalUrl { get; set; } = null!;
     public bool IsActive { get; set; } = true;
 
