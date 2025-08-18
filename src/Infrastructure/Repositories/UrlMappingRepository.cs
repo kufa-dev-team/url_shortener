@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Repositories
 {
-    public class UrlMappingRepository : IUrlMappingRepository , IRepository<UrlMapping>
+    public class UrlMappingRepository : IUrlMappingRepository, IRepository<UrlMapping>
     {
         // The DbContext instance for database operations
         // The DbSet for UrlMapping entities
@@ -26,17 +26,12 @@ namespace Infrastructure.Repositories
         }
 
         // Implement the methods defined in the IUrlMappingRepository interface
-        public async Task<UrlMapping> AddAsync(UrlMapping urlMapping)
+        public async Task<UrlMapping> AddAsync(UrlMapping entity)
         {
-            // Check if urlMapping is null to avoid adding null entries
-            if (urlMapping == null)
-            {
-                _logger.LogError("Attempted to add a null UrlMapping.");
-                throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
-            }
+
             // Add the UrlMapping entity to the DbSet and return the added entity
-            await _dbSet.AddAsync(urlMapping);
-            return urlMapping;
+            var AddedUrl = await _dbSet.AddAsync(entity);
+            return AddedUrl.Entity;
         }
 
         public async Task DeleteAsync(int Id)
@@ -60,12 +55,7 @@ namespace Infrastructure.Repositories
             we are using the Entry method to attach the entity to the context
             and mark it as modified
             */
-               
-            if (urlMapping == null)
-            {
-                _logger.LogError("Attempted to update a null UrlMapping.");
-                throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
-            }
+
             /* 
             Attach the entity to the context and mark it as modified
             we just marks the whole entity as modified, 
@@ -92,12 +82,7 @@ namespace Infrastructure.Repositories
 
         public async Task<UrlMapping?> GetByIdAsync(int Id)
         {
-            if (Id <= 0)
-            {
-                _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", Id);
-                throw new ArgumentOutOfRangeException(nameof(Id), "Id must be greater than zero.");
-            }
-            
+
             return await _dbSet.Where(u => u.Id == Id)
                 .FirstOrDefaultAsync();
         }
@@ -105,7 +90,6 @@ namespace Infrastructure.Repositories
 
         public async Task<IEnumerable<UrlMapping>> GetMostClickedAsync(int limit)
         {
-            // Ensure limit is a positive number
             if (limit <= 0)
             {
                 _logger.LogError("Invalid limit value: {Limit}. It must be greater than zero.", limit);
@@ -120,5 +104,34 @@ namespace Infrastructure.Repositories
                 .AsNoTracking() // Better performance for read-only
                 .ToListAsync();
         }
+        public async Task<UrlMapping?> GetByShortCodeAsync(string shortCode)
+        {
+
+
+            return await _dbSet
+                .Where(u => u.ShortCode == shortCode)
+                .FirstOrDefaultAsync();
+        }
+        public async Task<bool> UrlExistsAsync(string shortCode)
+        {
+            // Check if a URL mapping with the given short code exists
+            return await _dbSet.AnyAsync(u => u.ShortCode == shortCode);
+        }
+
+        public async Task IncrementClickCountAsync(int id)
+        {
+            await _context.UrlMappings
+                .Where(u => u.Id == id)
+                .ExecuteUpdateAsync(u =>
+                    u.SetProperty(x => x.ClickCount, x => x.ClickCount + 1));
+        }
+
+        public async Task<IEnumerable<UrlMapping>> GetExpiredUrlsAsync()
+        {
+            return await _context.UrlMappings
+                .Where(u => u.IsActive && u.ExpiresAt < DateTime.UtcNow)
+                .ToListAsync();
+        }
+
     }
 }

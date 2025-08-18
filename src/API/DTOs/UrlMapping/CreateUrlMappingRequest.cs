@@ -1,10 +1,12 @@
 namespace API.DTOs.UrlMapping;
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 // Request DTOs
 public class CreateUrlMappingRequest
 {
+    
     /// <summary>
     /// The original URL to be shortened
     /// </summary>
@@ -19,7 +21,7 @@ public class CreateUrlMappingRequest
     /// </summary>
     /// <example>my-link</example>
     [RegularExpression(@"^[a-zA-Z0-9_-]+$", ErrorMessage = "Short code can only contain letters, numbers, hyphens, and underscores")]
-    [MinLength(3, ErrorMessage = "Custom short code must be at least 3 characters")]
+    //[MinLength(3, ErrorMessage = "Custom short code must be at least 3 characters")]
     [MaxLength(20, ErrorMessage = "Custom short code cannot exceed 20 characters")]
     public string? CustomShortCode { get; set; }
 
