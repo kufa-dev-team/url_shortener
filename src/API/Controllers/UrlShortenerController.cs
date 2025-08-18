@@ -26,7 +26,6 @@ namespace API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<CreateUrlMappingResponse>> CreateShortUrl([FromBody] CreateUrlMappingRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
                 var urlMapping = new UrlMapping
