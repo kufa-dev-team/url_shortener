@@ -54,5 +54,12 @@ TestResult.xml
 nunit-*.xml
 .idea/
 
-# Exclude compose/.env
-compose/.env
+# Environment files with sensitive data
+.env
+docker/.env
+
+# CACHING_GUIDE.md
+CACHING_GUIDE.md
+
+# IDE settings files that should be ignored
+*.sln.DotSettings.user

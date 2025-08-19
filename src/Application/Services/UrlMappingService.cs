@@ -16,17 +16,17 @@ namespace Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UrlMappingService> _logger;
         private readonly int _shortCodeLength;
-        private readonly StackExchange.Redis.IDatabase _redis;
+        private readonly StackExchange.Redis.IDatabase? _redis;
 
         public UrlMappingService(
             IUrlMappingRepository urlMappingRepository,
             IUnitOfWork unitOfWork,
             ILogger<UrlMappingService> logger,
             IShortUrlGeneratorService shortUrlGeneratorService,
-            IConnectionMultiplexer redis,
+            IConnectionMultiplexer? redis = null,
             int shortCodeLength = 8)
         {
-            _redis = (redis ?? throw new ArgumentNullException(nameof(redis))).GetDatabase();
+            _redis = redis?.GetDatabase();
             _shortUrlGeneratorService = shortUrlGeneratorService ?? throw new ArgumentNullException(nameof(shortUrlGeneratorService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -83,7 +83,10 @@ namespace Application.Services
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
                 await _unitOfWork.SaveChangesAsync();
 
-                await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(30));
+                if (_redis != null)
+                {
+                    await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(30));
+                }
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
             }
@@ -114,7 +117,10 @@ namespace Application.Services
                 // Delete the URL mapping from the database
                 await _urlMappingRepository.DeleteAsync(id);
                 await _unitOfWork.SaveChangesAsync();
-                await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");//remove from Redis only if then the delete operation is successful in the database
+                if (_redis != null)
+                {
+                    await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");//remove from Redis only if then the delete operation is successful in the database
+                }
                 await _unitOfWork.CommitTransactionAsync();
             }
             catch (DbUpdateException dbEx)
@@ -315,17 +321,20 @@ namespace Application.Services
                 await _urlMappingRepository.UpdateAsync(existingMapping);
                 await _unitOfWork.SaveChangesAsync();
 
-                var redisKey = $"url:{existingMapping.ShortCode}";
-                await _redis.StringSetAsync(
-                    redisKey,
-                    existingMapping.OriginalUrl.Trim(),
-                    TimeSpan.FromDays(30));
-
-                // Only delete old key if short code changed
-                if (!string.IsNullOrWhiteSpace(customShortCode) &&
-                    customShortCode != existingMapping.ShortCode)
+                if (_redis != null)
                 {
-                    await _redis.KeyDeleteAsync($"url:{existingMapping.ShortCode}");
+                    var redisKey = $"url:{existingMapping.ShortCode}";
+                    await _redis.StringSetAsync(
+                        redisKey,
+                        existingMapping.OriginalUrl.Trim(),
+                        TimeSpan.FromDays(30));
+
+                    // Only delete old key if short code changed
+                    if (!string.IsNullOrWhiteSpace(customShortCode) &&
+                        customShortCode != existingMapping.ShortCode)
+                    {
+                        await _redis.KeyDeleteAsync($"url:{existingMapping.ShortCode}");
+                    }
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
