@@ -40,51 +40,33 @@ src/
 
 ### Quick Start with Docker
 
-1. **Start the infrastructure services:**
-
-**macOS/Linux:**
+1. **Setup environment configuration:**
 ```bash
-# Navigate to compose directory
-cd compose
-
 # Copy environment configuration
-cp .env.example .env
-
-# Start PostgreSQL and Redis
-docker-compose -f docker-compose.dev.yml up -d
-
-# Verify services are running
-docker-compose -f docker-compose.dev.yml ps
+cp .env.example .env  # Edit as needed
 ```
 
-**Windows (PowerShell):**
-```powershell
-# Navigate to compose directory
-cd compose
-
-# Copy environment configuration
-Copy-Item .env.example .env
-
-# Start PostgreSQL and Redis
-docker-compose -f docker-compose.dev.yml up -d
-
-# Verify services are running
-docker-compose -f docker-compose.dev.yml ps
-```
-
-2. **Run the application:**
+2. **Start the services:**
 ```bash
-# Return to project root
-cd ..
+# Production (full application stack)
+docker-compose -f docker/docker-compose.yml up -d
 
-# Build the solution
-dotnet build
-
-# Run the API
-dotnet run --project src/API
+# OR Development (infrastructure only - run API locally)
+docker-compose -f docker/docker-compose.dev.yml up -d
 ```
 
-The application will start on `http://localhost:5135`
+3. **Apply database migrations:**
+```bash
+# Linux/macOS
+./scripts/migrate.sh
+
+# Windows PowerShell
+.\scripts\migrate.ps1
+```
+
+4. **Access the application:**
+- **Production**: http://localhost:5000
+- **Development**: Run API locally with `dotnet run --project src/API`
 
 ### Development Services
 
@@ -311,11 +293,47 @@ The `compose/` folder contains everything needed for local development:
 
 See `compose/README.md` for detailed Docker Compose usage instructions.
 
+## 📊 Database Migrations
+
+The application uses Entity Framework Core for database management. After starting PostgreSQL, apply migrations using the provided scripts:
+
+### Migration Scripts (Recommended)
+```bash
+# Linux/macOS
+./scripts/migrate.sh
+
+# Windows PowerShell
+.\scripts\migrate.ps1 -Help  # View help
+.\scripts\migrate.ps1        # Run migration
+```
+
+The migration scripts will:
+1. ✅ Verify Docker prerequisites (PostgreSQL running, network exists)
+2. 🏗️ Build temporary migration Docker image with EF Core tools
+3. 🚀 Apply all pending database migrations
+4. ✅ Confirm successful completion
+
+### Manual Migration (Advanced)
+```bash
+# Build migration container
+docker build -f Dockerfile.migration -t migration-runner .
+
+# Run migrations
+docker run --rm --network urlshortener_network migration-runner \
+  --connection "Host=postgres;Port=5432;Database=urlshortener;Username=postgres;Password=YourPassword;"
+```
+
+### Troubleshooting Migrations
+If migrations fail:
+- Ensure PostgreSQL container is healthy: `docker ps`
+- Verify Docker network exists: `docker network ls | grep urlshortener`
+- Check .env file credentials
+- Review migration logs for specific errors
+
 ## 🚀 Future Enhancements
 
-- **Redis Integration** - Implement distributed caching
 - **Authentication** - Add JWT-based security
-- **Rate Limiting** - Prevent abuse
+- **Rate Limiting** - Prevent abuse  
 - **Analytics** - Track click statistics
 - **Custom Domains** - Support branded short URLs
 - **Bulk Operations** - Process multiple URLs

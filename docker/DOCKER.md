@@ -111,7 +111,11 @@ docker exec -it urlshortener-postgres psql -U postgres -d urlshortener
 # Connect to PostgreSQL (production)
 docker exec -it urlshortener-postgres psql -U postgres -d urlshortener
 
-# Run database migrations
+# Run database migrations (using migration script - recommended)
+./scripts/migrate.sh        # Linux/macOS
+.\scripts\migrate.ps1       # Windows PowerShell
+
+# Alternative: Direct Docker command (if script is not available)
 docker exec -it urlshortener-api dotnet ef database update
 ```
 
@@ -256,6 +260,52 @@ docker stats
 - **Port**: `6379`
 - **Password**: From `.env` file
 
+## Database Migrations
+
+The application uses Entity Framework Core for database management. After starting the PostgreSQL container, you need to apply database migrations.
+
+### Migration Scripts (Recommended)
+
+Use the provided migration scripts for a streamlined experience:
+
+```bash
+# Linux/macOS
+./scripts/migrate.sh
+
+# Windows PowerShell  
+.\scripts\migrate.ps1
+
+# Windows with help
+.\scripts\migrate.ps1 -Help
+```
+
+These scripts will:
+1. ✅ Check Docker prerequisites
+2. 🏗️ Build migration Docker image  
+3. 🚀 Apply EF Core migrations
+4. ✅ Verify completion
+
+### Manual Migration (Advanced)
+
+If you prefer manual control:
+
+```bash
+# Build migration image
+docker build -f Dockerfile.migration -t migration-runner .
+
+# Run migration
+docker run --rm --network urlshortener_network migration-runner \
+  --connection "Host=postgres;Port=5432;Database=urlshortener;Username=postgres;Password=SecurePassword123!;"
+```
+
+### Troubleshooting Migrations
+
+If migrations fail:
+1. Ensure PostgreSQL container is healthy: `docker ps`
+2. Check network exists: `docker network ls | grep urlshortener`
+3. Verify .env file has correct credentials
+4. Check migration logs for specific errors
+
 ## Best Practices
 
 1. **Always use .env files** for sensitive configuration
@@ -264,6 +314,7 @@ docker stats
 4. **Monitor container health** with `docker-compose ps`
 5. **Regular cleanup** with `docker system prune`
 6. **Backup data volumes** before major changes
+7. **Run migrations after starting PostgreSQL** but before using the API
 
 ## Integration with Development Workflow
 
