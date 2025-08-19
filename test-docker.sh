@@ -60,7 +60,7 @@ start_services() {
 wait_for_health() {
     print_status "Waiting for services to become healthy..."
     
-    local max_attempts=30
+    local max_attempts=10
     local attempt=0
     
     while [ $attempt -lt $max_attempts ]; do

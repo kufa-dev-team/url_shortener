@@ -115,7 +115,7 @@ namespace UrlShortener.Api.Tests
 
             _serviceMock.Setup(s => s.GetByIdAsync(updateRequest.Id)).ReturnsAsync(existingUrl);
             _serviceMock.Setup(s => s.UpdateUrlAsync(It.IsAny<UrlMapping>(), updateRequest.CustomShortCode))
-                        .Returns(Task.CompletedTask);
+                        .ReturnsAsync(existingUrl);
 
             // Act
             var result = await _controller.UpdateUrl(updateRequest);
