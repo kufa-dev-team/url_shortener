@@ -1,0 +1,69 @@
+# Docker build context optimization
+# Exclude unnecessary files to reduce build context size and improve build speed
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.sln.docstates
+
+# Test results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+# Documentation
+README.md
+CACHING_GUIDE.md
+LICENSE
+**/*.md
+
+# Development files
+docker/docker-compose.dev.yml
+launchSettings.json
+
+# Temporary files
+**/*.tmp
+**/*.temp
+**/tmp/
+
+# Log files
+**/*.log
+logs/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

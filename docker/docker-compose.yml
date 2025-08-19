@@ -1,0 +1,98 @@
+services:
+  # URL Shortener API Service
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: urlshortener-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://*:8080}
+      # Override only sensitive values from .env file
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=true;
+      # Redis configuration (disabled for now - ready for future integration)
+      # - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD}
+      # - Redis__IsEnabled=${REDIS_ENABLED}
+      # - Redis__DefaultTtlSeconds=${REDIS_DEFAULT_TTL_SECONDS}
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # Redis dependency disabled for now
+      # redis:
+      #   condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - urlshortener-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: urlshortener-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-urlshortener}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}
+      # Security configurations
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    # Remove port exposure for production security
+    # ports:
+    #   - "5432:5432"
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d urlshortener"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - urlshortener-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: urlshortener-redis
+    # Remove port exposure for production security
+    # ports:
+    #   - "6379:6379"
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0 --requirepass ${REDIS_PASSWORD:-SecureRedisPassword123!}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-SecureRedisPassword123!}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - urlshortener-network
+
+volumes:
+  postgres_data:
+    driver: local
+    name: urlshortener_postgres_data
+  redis_data:
+    driver: local  
+    name: urlshortener_redis_data
+
+networks:
+  urlshortener-network:
+    driver: bridge
+    name: urlshortener_network

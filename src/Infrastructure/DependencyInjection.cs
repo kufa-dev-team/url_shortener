@@ -20,15 +20,15 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
 
-        // Redis
-        var redisConnectionString = configuration["Redis:ConnectionStrings"];
-        if (string.IsNullOrEmpty(redisConnectionString))
-        {
-            throw new ArgumentNullException("Redis:ConnectionStrings", "Redis connection string is not configured.");
-        }
-        var redisConfig = ConfigurationOptions.Parse(redisConnectionString);
-        services.AddSingleton<IConnectionMultiplexer>(
-            ConnectionMultiplexer.Connect(redisConfig));
+        // Redis (disabled for now - ready for future integration)
+        // var redisConnectionString = configuration["Redis:ConnectionStrings"];
+        // if (string.IsNullOrEmpty(redisConnectionString))
+        // {
+        //     throw new ArgumentNullException("Redis:ConnectionStrings", "Redis connection string is not configured.");
+        // }
+        // var redisConfig = ConfigurationOptions.Parse(redisConnectionString);
+        // services.AddSingleton<IConnectionMultiplexer>(
+        //     ConnectionMultiplexer.Connect(redisConfig));
             
         // Repositories and Services
         services.AddScoped<IUnitOfWork, UnitOfWork>();
