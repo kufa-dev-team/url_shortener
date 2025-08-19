@@ -3,6 +3,8 @@ using Application.Services;
 using Domain.Interfaces;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 builder.Services.AddScoped<IUrlMappingService, UrlMappingService>();
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = builder.Configuration.GetConnectionString("ConnectionStrings") ?? "localhost:6379";
+    return ConnectionMultiplexer.Connect(configuration);
+});
 
 
 // Add application layers
@@ -29,7 +37,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    
+    app.MapScalarApiReference();
+
 }
 
 app.UseHttpsRedirection();
