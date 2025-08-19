@@ -1,0 +1,26 @@
+# Temporary migration Dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS migration
+
+WORKDIR /app
+
+# Copy solution and project files
+COPY *.sln ./
+COPY src/API/API.csproj ./src/API/
+COPY src/Application/Application.csproj ./src/Application/
+COPY src/Domain/Domain.csproj ./src/Domain/
+COPY src/Infrastructure/Infrastructure.csproj ./src/Infrastructure/
+COPY tests/UrlShortener.Api.Tests/UrlShortener.Api.Tests.csproj ./tests/UrlShortener.Api.Tests/
+COPY tests/UrlShortener.Infrastructure.Tests/UrlShortener.Infrastructure.Tests.csproj ./tests/UrlShortener.Infrastructure.Tests/
+
+# Restore dependencies
+RUN dotnet restore
+
+# Copy source code
+COPY src/ ./src/
+
+# Install EF Core tools
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Default command for running migrations
+CMD ["dotnet", "ef", "database", "update", "--project", "src/Infrastructure", "--startup-project", "src/API"]
