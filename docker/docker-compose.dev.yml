@@ -53,21 +53,21 @@ services:
     networks:
       - urlshortener-network
 
-  supabase-studio:
-    image: supabase/studio:latest
+  pgadmin:
+    image: dpage/pgadmin4:latest
     platform: linux/arm64
-    container_name: urlshortener-studio
+    container_name: urlshortener-pgadmin
     ports:
-      - "8080:3000"
+      - "8080:80"
     environment:
-      SUPABASE_URL: http://localhost:3000
-      SUPABASE_REST_URL: http://localhost:3000/rest/v1/
-      POSTGRES_PASSWORD: postgres
-      DEFAULT_ORGANIZATION_NAME: "URL Shortener"
-      DEFAULT_PROJECT_NAME: "Development"
-      SUPABASE_PUBLIC_URL: http://localhost:8080
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - urlshortener-network
 
@@ -75,6 +75,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 

@@ -13,22 +13,42 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<IUrlMappingService, UrlMappingService>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{
-    var configuration = builder.Configuration.GetConnectionString("ConnectionStrings") ?? "localhost:6379";
-    return ConnectionMultiplexer.Connect(configuration);
-});
 
 
-// Add application layers
-builder.Services.AddApplication();
+
+
+
+
+
+
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("The connection string 'DefaultConnection' was not found or is empty. Please check your configuration.");
 
+// Add health checks  
+var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+var redisPassword = builder.Configuration["Redis:Password"];
+if (!string.IsNullOrEmpty(redisPassword))
+{
+    redisConnectionString += $",password={redisPassword}";
+}
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(connectionString, name: "database", tags: new[] { "db", "postgresql" })
+    .AddRedis(redisConnectionString, name: "redis-cache", tags: new[] { "cache", "redis" });
+
+builder.Services.AddScoped<IUrlMappingService, UrlMappingService>();
+
+// Add application layers
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Configuration);
+
+
+
+
+
+
 
 var app = builder.Build();
 
@@ -44,5 +64,33 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map health check endpoints
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // Only basic liveness check
+});
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("db") || check.Tags.Contains("cache")
+});
+
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            entries = report.Entries.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new { status = kvp.Value.Status.ToString() }
+            )
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
 
 app.Run();

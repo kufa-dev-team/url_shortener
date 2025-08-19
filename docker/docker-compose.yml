@@ -9,20 +9,19 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://*:8080}
       # Override only sensitive values from .env file
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=true;
-      # Redis configuration (disabled for now - ready for future integration)
-      # - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD}
-      # - Redis__IsEnabled=${REDIS_ENABLED}
-      # - Redis__DefaultTtlSeconds=${REDIS_DEFAULT_TTL_SECONDS}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=false;
+      - Redis__ConnectionString=redis:6379
+      - Redis__Password=${REDIS_PASSWORD}
+      - Redis__IsEnabled=${REDIS_ENABLED:-true}
+      - Redis__DefaultTtlSeconds=${REDIS_DEFAULT_TTL_SECONDS:-10800}
       - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
     ports:
       - "5000:8080"
     depends_on:
       postgres:
         condition: service_healthy
-      # Redis dependency disabled for now
-      # redis:
-      #   condition: service_healthy
+      redis:
+         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live", "||", "exit", "1"]
       interval: 30s

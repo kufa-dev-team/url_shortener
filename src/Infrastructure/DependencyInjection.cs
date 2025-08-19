@@ -20,15 +20,32 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
 
-        // Redis (disabled for now - ready for future integration)
-        // var redisConnectionString = configuration["Redis:ConnectionStrings"];
-        // if (string.IsNullOrEmpty(redisConnectionString))
-        // {
-        //     throw new ArgumentNullException("Redis:ConnectionStrings", "Redis connection string is not configured.");
-        // }
-        // var redisConfig = ConfigurationOptions.Parse(redisConnectionString);
-        // services.AddSingleton<IConnectionMultiplexer>(
-        //     ConnectionMultiplexer.Connect(redisConfig));
+        // Redis configuration - optional, controlled by IsEnabled setting
+        var redisEnabledString = configuration["Redis:IsEnabled"];
+        var redisEnabled = string.IsNullOrEmpty(redisEnabledString) ? true : bool.Parse(redisEnabledString);
+        
+        if (redisEnabled)
+        {
+            var redisConnectionString = configuration["Redis:ConnectionString"];
+            if (!string.IsNullOrEmpty(redisConnectionString))
+            {
+                var redisPassword = configuration["Redis:Password"];
+                var redisConfig = ConfigurationOptions.Parse(redisConnectionString);
+                
+                if (!string.IsNullOrEmpty(redisPassword))
+                {
+                    redisConfig.Password = redisPassword;
+                }
+                
+                var timeoutString = configuration["Redis:ConnectTimeoutMs"];
+                var timeout = string.IsNullOrEmpty(timeoutString) ? 5000 : int.Parse(timeoutString);
+                redisConfig.ConnectTimeout = timeout;
+                redisConfig.AbortOnConnectFail = false; // Allow app to start even if Redis is down
+                
+                services.AddSingleton<IConnectionMultiplexer>(
+                    ConnectionMultiplexer.Connect(redisConfig));
+            }
+        }
             
         // Repositories and Services
         services.AddScoped<IUnitOfWork, UnitOfWork>();
