@@ -87,7 +87,7 @@ namespace UrlShortener.Api.Tests
         {
             // Arrange
             int urlId = 1;
-            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync((UrlMapping)null);
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync((UrlMapping?)null);
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);
@@ -112,10 +112,20 @@ namespace UrlShortener.Api.Tests
             };
 
             var existingUrl = new UrlMapping { Id = 1, ShortCode = "EAGA2025" };
+            var updatedUrl = new UrlMapping 
+            { 
+                Id = 1, 
+                ShortCode = updateRequest.CustomShortCode!,
+                OriginalUrl = updateRequest.OriginalUrl!,
+                Title = updateRequest.Title,
+                Description = updateRequest.Description,
+                ExpiresAt = updateRequest.ExpiresAt,
+                IsActive = updateRequest.IsActive
+            };
 
             _serviceMock.Setup(s => s.GetByIdAsync(updateRequest.Id)).ReturnsAsync(existingUrl);
             _serviceMock.Setup(s => s.UpdateUrlAsync(It.IsAny<UrlMapping>(), updateRequest.CustomShortCode))
-                        .ReturnsAsync(existingUrl);
+                        .ReturnsAsync(updatedUrl);
 
             // Act
             var result = await _controller.UpdateUrl(updateRequest);
@@ -195,7 +205,7 @@ namespace UrlShortener.Api.Tests
         public async Task GetUrlById_ShouldReturnNotFound_WhenUrlDoesNotExist()
         {
             // Arrange
-            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((UrlMapping)null);
+            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((UrlMapping?)null);
 
             // Act
             var result = await _controller.GetUrlById(999);
