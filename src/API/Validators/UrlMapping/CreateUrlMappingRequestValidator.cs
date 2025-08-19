@@ -18,10 +18,8 @@ public class CreateUrlMappingRequestValidator : AbstractValidator<CreateUrlMappi
         RuleFor(x => x.CustomShortCode)
             .Matches(@"^[a-zA-Z0-9_-]+$")
             .WithMessage("Short code can only contain letters, numbers, hyphens, and underscores")
-            .MinimumLength(3)
-            .WithMessage("Custom short code must be at least 3 characters")
-            .MaximumLength(20)
-            .WithMessage("Custom short code cannot exceed 20 characters")
+            .Length(8)
+            .WithMessage("Custom short code must be exactly 8 characters long")
             .When(x => !string.IsNullOrEmpty(x.CustomShortCode));
 
         RuleFor(x => x.ExpiresAt)
