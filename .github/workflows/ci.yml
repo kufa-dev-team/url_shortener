@@ -108,6 +108,8 @@ jobs:
       contents: read
       packages: read
       security-events: write
+      actions: read
+      id-token: write
       
     steps:
     - name: Checkout repository
@@ -168,11 +170,21 @@ jobs:
           exit 1
         fi
         
+    # Try to upload to GitHub Security tab (may fail if Advanced Security is not enabled)
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
       if: success()
       with:
         sarif_file: 'trivy-results.sarif'
+        
+    # Alternative: Upload as workflow artifact (always works)
+    - name: Upload SARIF results as artifact
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: trivy-sarif-results
+        path: 'trivy-results.sarif'
         
     - name: Run Trivy vulnerability scanner (table output)
       uses: aquasecurity/trivy-action@0.28.0
@@ -183,12 +195,51 @@ jobs:
         ignore-unfixed: true
         severity: 'CRITICAL,HIGH,MEDIUM'
         
-    - name: Upload Trivy scan results artifact
+    # Generate human-readable HTML report
+    - name: Run Trivy vulnerability scanner (HTML report)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ${{ steps.image.outputs.full-image }}
+        format: 'template'
+        template: '@/contrib/html.tpl'
+        output: 'trivy-report.html'
+        exit-code: '0'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        
+    - name: Upload all Trivy scan results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: trivy-scan-results
-        path: 'trivy-results.sarif'
+        path: |
+          trivy-results.sarif
+          trivy-report.html
+          
+    # Generate summary for workflow
+    - name: Security scan summary
+      if: always()
+      run: |
+        echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Image Scanned:** \`${{ steps.image.outputs.full-image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "trivy-results.sarif" ]; then
+          echo "✅ SARIF report generated successfully" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "trivy-report.html" ]; then
+          echo "✅ HTML report generated successfully" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ HTML report generation failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📋 **View Results:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Download the \`trivy-scan-results\` artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "- Open \`trivy-report.html\` in your browser for a detailed vulnerability report" >> $GITHUB_STEP_SUMMARY
 
   # Job 4: Deployment Readiness Check
   deployment-check:
