@@ -5,7 +5,7 @@ namespace Domain.Interfaces;
 public interface IUrlMappingService
 {
     Task<UrlMapping> CreateUrlMappingAsync(UrlMapping urlMapping, string? customShortCode = null);
-    Task<UrlMapping?> GetByShortCodeAsync(string shortCode);
+    Task<String?> GetByShortCodeAsync(string shortCode);
     Task<bool> UrlExistsAsync(string shortCode);
     Task<UrlMapping?> GetByIdAsync(int id);
     Task<IEnumerable<UrlMapping>> GetMostClickedUrlsAsync(int limit);

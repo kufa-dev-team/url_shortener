@@ -74,19 +74,23 @@ namespace Application.Services
                     UrlMapping.ShortCode = customShortCode;
                 }
 
-
                 if (UrlMapping.ExpiresAt.HasValue && UrlMapping.ExpiresAt.Value <= DateTime.UtcNow)
                 {
                     _logger.LogError("Expiration date must be in the future.");
                     throw new ArgumentException("Expiration date must be in the future.", nameof(UrlMapping.ExpiresAt));
                 }
+
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
                 await _unitOfWork.SaveChangesAsync();
-                // Cache the URL mapping in Redis with a 1-day expiration(TTL)
+
+                // Cache the full entity in Redis by id and by short code
                 if (_redis != null)
                 {
-                    await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(1));
+                    var entityJson = System.Text.Json.JsonSerializer.Serialize(createdUrlMapping);
+                    await _redis.StringSetAsync($"url:id:{createdUrlMapping.Id}", entityJson, TimeSpan.FromDays(1));
+                    await _redis.StringSetAsync($"url:short:{createdUrlMapping.ShortCode}", entityJson, TimeSpan.FromDays(1));
                 }
+
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
             }
@@ -165,28 +169,35 @@ namespace Application.Services
 
         public async Task<UrlMapping?> GetByIdAsync(int Id)
         {
-
-            if (Id < 0)
+            if (Id <= 0)
             {
                 _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", Id);
                 throw new ArgumentOutOfRangeException(nameof(Id), "Id must be greater than zero.");
             }
+
             try
             {
-                var cacheKey = $"url:id:{Id}";
-                // Try to get the entity from Redis cache first
-                var cached = await _redis.StringGetAsync(cacheKey);
-                if (cached.HasValue)
+                // Try Redis cache first (if available)
+                if (_redis != null)
                 {
-                    return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                    var cacheKey = $"url:id:{Id}";
+                    var cached = await _redis.StringGetAsync(cacheKey);
+                    if (cached.HasValue)
+                    {
+                        return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                    }
                 }
-                // If not found in cache, get from databas               
+               
+                // If not found in cache, get from database
                 var entity = await _urlMappingRepository.GetByIdAsync(Id);
-                if (entity != null)
+
+                // Cache if Redis available and entity found
+                if (entity != null && _redis != null)
                 {
-                    // Store in cache for future requests (e.g., 1 day)
+                    var cacheKey = $"url:id:{Id}";
                     await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
                 }
+
                 return entity;
             }
             catch (Exception ex)
@@ -196,29 +207,37 @@ namespace Application.Services
             }
         }
 
-        public async Task<UrlMapping?> GetByShortCodeAsync(string shortCode)
+        public async Task<String?> GetByShortCodeAsync(string shortCode)
         {
             if (string.IsNullOrWhiteSpace(shortCode))
             {
                 _logger.LogError("Short code cannot be null or empty.");
                 throw new ArgumentException("Short code cannot be null or empty.", nameof(shortCode));
             }
+
             try
             {
+                // Try Redis cache first (if available)
                 var cacheKey = $"url:short:{shortCode}";
-                // Try to get the entity from Redis cache first
                 var cached = await _redis.StringGetAsync(cacheKey);
                 if (cached.HasValue)
-                    return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                {
+                    var EntityCached= System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                    return EntityCached?.OriginalUrl ?? string.Empty;
+                }
 
-                // If not found in cache, get from database
+
+                // Get from database
                 var entity = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
+
+                // Cache if Redis available and entity found
                 if (entity != null)
                 {
-                    // Store in cache for future requests (e.g., 1 day)
-                    await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
+                    var cacheKey2 = $"url:short:{shortCode}";
+                    await _redis.StringSetAsync(cacheKey2, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
                 }
-                return entity;
+
+                return entity.OriginalUrl ?? string.Empty;
             }
             catch (Exception ex)
             {
@@ -253,29 +272,34 @@ namespace Application.Services
                 _logger.LogError("Short code cannot be null or empty.");
                 throw new ArgumentException("Invalid short code", nameof(shortCode));
             }
-            // Read-through: Try to get the original URL from Redis cache first
-            var cacheKey = $"url:{shortCode}";
-            var cachedUrl = await _redis.StringGetAsync(cacheKey);
-            if (cachedUrl.HasValue)
+
+            var cacheKey = $"url:short:{shortCode}";
+            var cached = await _redis.StringGetAsync(cacheKey);
+            if (cached.HasValue)
             {
-                
-                return cachedUrl!;
+                // Deserialize and return only the OriginalUrl
+                var entity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                return entity?.OriginalUrl ?? string.Empty;
             }
 
-            // If not found in cache, get from database as before
+            // If not found in cache, get from database
             var urlMapping = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
             if (urlMapping == null || !urlMapping.IsActive)
             {
                 _logger.LogWarning("Invalid or inactive short code: {ShortCode}", shortCode);
                 throw new KeyNotFoundException("URL not found");
             }
-            // Store the result in cache for next time (TTL 1 day)
-            await _redis.StringSetAsync(cacheKey, urlMapping.OriginalUrl, TimeSpan.FromDays(1));
+
+            // Store the full entity in cache for next time (TTL 1 day)
+            if (_redis != null)
+            {
+                var entityJson = System.Text.Json.JsonSerializer.Serialize(urlMapping);
+                await _redis.StringSetAsync(cacheKey, entityJson, TimeSpan.FromDays(1));
+            }
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // Atomic counter update
                 await _urlMappingRepository.IncrementClickCountAsync(urlMapping.Id);
                 await _unitOfWork.CommitTransactionAsync();
                 return urlMapping.OriginalUrl;
@@ -284,7 +308,7 @@ namespace Application.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error processing redirect for {ShortCode}", shortCode);
-                throw; // Re-throw for controller handling
+                throw;
             }
         }
 
@@ -295,9 +319,11 @@ namespace Application.Services
                 _logger.LogError("Attempted to update a null UrlMapping.");
                 throw new ArgumentNullException(nameof(urlMapping), "UrlMapping cannot be null.");
             }
-            
+
             var existingMapping = await _urlMappingRepository.GetByIdAsync(urlMapping.Id) ?? throw new KeyNotFoundException("UrlMapping not found.");
-            
+
+            string oldShortCode = existingMapping.ShortCode;
+
             if (!string.IsNullOrWhiteSpace(customShortCode))
             {
                 if (customShortCode.Length != _shortCodeLength)
@@ -312,7 +338,7 @@ namespace Application.Services
                 }
                 existingMapping.ShortCode = customShortCode;
             }
-            
+
             if (!string.IsNullOrWhiteSpace(urlMapping.Description))
                 existingMapping.Description = urlMapping.Description;
 
@@ -337,6 +363,7 @@ namespace Application.Services
                 As a result the if statement will mean :
                 IF (the string is not a valid url) Or (the url is not one of these protocol(HTTP/HTTPS) )
                 */
+
                 if (!Uri.TryCreate(urlMapping.OriginalUrl, UriKind.Absolute, out Uri? uriResult)
                     || (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
                 {
@@ -344,7 +371,7 @@ namespace Application.Services
                 }
                 existingMapping.OriginalUrl = urlMapping.OriginalUrl;
             }
-            
+
             if (urlMapping.ExpiresAt != null)
             {
                 if (urlMapping.ExpiresAt > DateTime.UtcNow)
@@ -352,7 +379,7 @@ namespace Application.Services
                 else
                     throw new ArgumentException("Expiration date must be in the future.");
             }
-            
+
             existingMapping.UpdatedAt = DateTime.UtcNow;
 
             try
@@ -363,22 +390,20 @@ namespace Application.Services
 
                 if (_redis != null)
                 {
-                    var redisKey = $"url:{existingMapping.ShortCode}";
-                    await _redis.StringSetAsync(
-                        redisKey,
-                        existingMapping.OriginalUrl.Trim(),
-                        TimeSpan.FromDays(1));
+                    var entityJson = System.Text.Json.JsonSerializer.Serialize(existingMapping);
+                    // Update cache by id and by short code
+                    await _redis.StringSetAsync($"url:id:{existingMapping.Id}", entityJson, TimeSpan.FromDays(1));
+                    await _redis.StringSetAsync($"url:short:{existingMapping.ShortCode}", entityJson, TimeSpan.FromDays(1));
 
-                    // Only delete old key if short code changed
-                    if (!string.IsNullOrWhiteSpace(customShortCode) &&
-                        customShortCode != existingMapping.ShortCode)
+                    // If short code changed, remove old short code cache
+                    if (!string.IsNullOrWhiteSpace(customShortCode) && customShortCode != oldShortCode)
                     {
-                        await _redis.KeyDeleteAsync($"url:{existingMapping.ShortCode}");
+                        await _redis.KeyDeleteAsync($"url:short:{oldShortCode}");
                     }
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
-                return existingMapping;  // Return the updated entity
+                return existingMapping;
             }
             catch (Exception ex)
             {
