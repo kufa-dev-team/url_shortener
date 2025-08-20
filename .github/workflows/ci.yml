@@ -98,7 +98,8 @@ jobs:
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
 
-  # Job 3: Security Scan with Trivy
+        
+# Job 3: Security Scan with Trivy
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -114,27 +115,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Extract image tag
-      id: image
-      run: |
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          TAG="pr-${{ github.event.number }}"
-        else
-          # Correctly get the short 7-character SHA from the full one
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          TAG="${{ github.ref_name }}-${SHORT_SHA}"
-          TAG="${TAG//\//-}"
-        fi
-        echo "tag=${TAG}" >> $GITHUB_OUTPUT
-        echo "full-image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}" >> $GITHUB_OUTPUT
-        echo "Scanning image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}"
-        
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+        
+    # Use the actual image tag from the previous job
+    - name: Get image tag from previous job
+      id: image
+      run: |
+        # Extract the first tag from the multi-line tags output
+        FULL_TAG=$(echo "${{ needs.docker-build-push.outputs.image-tag }}" | head -n1)
+        echo "full-image=${FULL_TAG}" >> $GITHUB_OUTPUT
+        echo "Scanning image: ${FULL_TAG}"
         
     # Verify image exists before scanning
     - name: Verify image exists
@@ -220,6 +215,7 @@ jobs:
         echo "- Download the \`trivy-scan-results\` artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
         echo "- Open \`trivy-report.html\` in your browser for a detailed vulnerability report" >> $GITHUB_STEP_SUMMARY
 
+        
   # Job 4: Deployment Readiness Check
   deployment-check:
     name: Deployment Readiness
