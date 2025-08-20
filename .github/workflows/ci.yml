@@ -42,18 +42,11 @@ jobs:
     - name: Run tests
       run: dotnet test UrlShortener.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
       
-    - name: Upload test results
+    - name: Upload test and coverage results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
-        path: '**/TestResults/**/*.xml'
-        
-    - name: Upload code coverage
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: code-coverage
+        name: test-and-coverage-results
         path: '**/TestResults/**/*.xml'
 
   # Job 2: Docker Build and Push to GHCR
@@ -96,7 +89,7 @@ jobs:
         context: .
         file: ./docker/Dockerfile
         push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}
+        tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -122,7 +115,8 @@ jobs:
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           TAG="pr-${{ github.event.number }}"
         else
-          TAG="${{ github.ref_name }}-${{ github.sha }}"
+          # FIX: Use the short SHA to match the tag created in the previous job.
+          TAG="${{ github.ref_name }}-${{ github.sha_short }}"
           TAG="${TAG//\//-}"
         fi
         echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -136,7 +130,8 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+      # SUGGESTION: Pin to a specific version instead of 'master' for stability.
+      uses: aquasecurity/trivy-action@0.21.0
       with:
         image-ref: ${{ steps.image.outputs.full-image }}
         format: 'sarif'
@@ -149,7 +144,8 @@ jobs:
         sarif_file: 'trivy-results.sarif'
         
     - name: Run Trivy vulnerability scanner (table output)
-      uses: aquasecurity/trivy-action@master
+      # SUGGESTION: Pin to a specific version.
+      uses: aquasecurity/trivy-action@0.21.0
       with:
         image-ref: ${{ steps.image.outputs.full-image }}
         format: 'table'
