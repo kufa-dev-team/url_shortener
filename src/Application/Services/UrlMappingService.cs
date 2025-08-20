@@ -82,10 +82,10 @@ namespace Application.Services
                 }
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
                 await _unitOfWork.SaveChangesAsync();
-
+                // Cache the URL mapping in Redis with a 1-day expiration(TTL)
                 if (_redis != null)
                 {
-                    await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(30));
+                    await _redis.StringSetAsync($"url:{createdUrlMapping.ShortCode}", UrlMapping.OriginalUrl, TimeSpan.FromDays(1));
                 }
                 await _unitOfWork.CommitTransactionAsync();
                 return createdUrlMapping;
@@ -120,6 +120,7 @@ namespace Application.Services
                 if (_redis != null)
                 {
                     await _redis.KeyDeleteAsync($"url:{urlMapping.ShortCode}");//remove from Redis only if then the delete operation is successful in the database
+                    await _redis.KeyDeleteAsync($"url:id:{id}");// remove the cache entry for the URL by Id
                 }
                 await _unitOfWork.CommitTransactionAsync();
             }
@@ -172,7 +173,21 @@ namespace Application.Services
             }
             try
             {
-                return await _urlMappingRepository.GetByIdAsync(Id);
+                var cacheKey = $"url:id:{Id}";
+                // Try to get the entity from Redis cache first
+                var cached = await _redis.StringGetAsync(cacheKey);
+                if (cached.HasValue)
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                }
+                // If not found in cache, get from databas               
+                var entity = await _urlMappingRepository.GetByIdAsync(Id);
+                if (entity != null)
+                {
+                    // Store in cache for future requests (e.g., 1 day)
+                    await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
+                }
+                return entity;
             }
             catch (Exception ex)
             {
@@ -190,7 +205,20 @@ namespace Application.Services
             }
             try
             {
-                return await _urlMappingRepository.GetByShortCodeAsync(shortCode);
+                var cacheKey = $"url:short:{shortCode}";
+                // Try to get the entity from Redis cache first
+                var cached = await _redis.StringGetAsync(cacheKey);
+                if (cached.HasValue)
+                    return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+
+                // If not found in cache, get from database
+                var entity = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
+                if (entity != null)
+                {
+                    // Store in cache for future requests (e.g., 1 day)
+                    await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
+                }
+                return entity;
             }
             catch (Exception ex)
             {
@@ -225,13 +253,25 @@ namespace Application.Services
                 _logger.LogError("Short code cannot be null or empty.");
                 throw new ArgumentException("Invalid short code", nameof(shortCode));
             }
+            // Read-through: Try to get the original URL from Redis cache first
+            var cacheKey = $"url:{shortCode}";
+            var cachedUrl = await _redis.StringGetAsync(cacheKey);
+            if (cachedUrl.HasValue)
+            {
+                
+                return cachedUrl!;
+            }
 
+            // If not found in cache, get from database as before
             var urlMapping = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
             if (urlMapping == null || !urlMapping.IsActive)
             {
                 _logger.LogWarning("Invalid or inactive short code: {ShortCode}", shortCode);
                 throw new KeyNotFoundException("URL not found");
             }
+            // Store the result in cache for next time (TTL 1 day)
+            await _redis.StringSetAsync(cacheKey, urlMapping.OriginalUrl, TimeSpan.FromDays(1));
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -327,7 +367,7 @@ namespace Application.Services
                     await _redis.StringSetAsync(
                         redisKey,
                         existingMapping.OriginalUrl.Trim(),
-                        TimeSpan.FromDays(30));
+                        TimeSpan.FromDays(1));
 
                     // Only delete old key if short code changed
                     if (!string.IsNullOrWhiteSpace(customShortCode) &&
