@@ -115,8 +115,9 @@ jobs:
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           TAG="pr-${{ github.event.number }}"
         else
-          # FIX: Use the short SHA to match the tag created in the previous job.
-          TAG="${{ github.ref_name }}-${{ github.sha_short }}"
+          # Correctly get the short 7-character SHA from the full one
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAG="${{ github.ref_name }}-${SHORT_SHA}"
           TAG="${TAG//\//-}"
         fi
         echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -130,7 +131,6 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Run Trivy vulnerability scanner
-      # SUGGESTION: Pin to a specific version instead of 'master' for stability.
       uses: aquasecurity/trivy-action@0.21.0
       with:
         image-ref: ${{ steps.image.outputs.full-image }}
@@ -144,7 +144,6 @@ jobs:
         sarif_file: 'trivy-results.sarif'
         
     - name: Run Trivy vulnerability scanner (table output)
-      # SUGGESTION: Pin to a specific version.
       uses: aquasecurity/trivy-action@0.21.0
       with:
         image-ref: ${{ steps.image.outputs.full-image }}
