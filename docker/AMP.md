@@ -9,6 +9,9 @@ Complete monitoring stack with:
 - **Grafana** - Visualization dashboards
 - **PostgreSQL Exporter** - Database metrics
 - **Redis Exporter** - Cache metrics
+- **cAdvisor** - Container resource monitoring
+- **Node Exporter** - System resource monitoring
+- **New Relic** - Infrastructure monitoring
 - **API Metrics** - Application performance metrics
 
 ## 📊 Architecture
@@ -30,6 +33,20 @@ Complete monitoring stack with:
                     │ │    Redis     │ │
                     │ │ (port 9121)  │ │
                     │ └──────────────┘ │
+                    │ ┌──────────────┐ │
+                    │ │   cAdvisor   │ │
+                    │ │ (port 8080)  │ │
+                    │ └──────────────┘ │
+                    │ ┌──────────────┐ │
+                    │ │Node Exporter │ │
+                    │ │ (port 9100)  │ │
+                    │ └──────────────┘ │
+                    └──────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │   New Relic      │
+                    │  Infrastructure  │
                     └──────────────────┘
 ```
 
@@ -62,6 +79,9 @@ curl http://localhost:5000/metrics
 | **Grafana** | http://localhost:3000 | admin/admin |
 | **PostgreSQL Exporter** | http://localhost:9187/metrics | No auth |
 | **Redis Exporter** | http://localhost:9121/metrics | No auth |
+| **cAdvisor** | http://localhost:8080 | No auth |
+| **Node Exporter** | http://localhost:9100/metrics | No auth |
+| **pgAdmin** | http://localhost:8082 | admin@admin.com/admin |
 
 ## 📈 Available Metrics
 
@@ -86,6 +106,26 @@ curl http://localhost:5000/metrics
 - Replication info
 - Persistence metrics
 
+### Container Metrics (`:8080/metrics`)
+- Container CPU usage
+- Container memory usage
+- Container network I/O
+- Container filesystem usage
+- Container restart counts
+
+### System Metrics (`:9100/metrics`)
+- Host CPU usage
+- Host memory usage
+- Host disk usage
+- Host network statistics
+- System load averages
+
+### New Relic Infrastructure
+- Real-time infrastructure monitoring
+- Docker container insights
+- System performance metrics
+- Alert notifications
+
 ## 🔧 Configuration Files
 
 ### prometheus.yml
@@ -104,6 +144,14 @@ scrape_configs:
   - job_name: 'redis-exporter'
     static_configs:
       - targets: ['redis-exporter:9121']        # Redis metrics
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']              # Container metrics
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']         # System metrics
 ```
 
 ### Docker Services
@@ -111,6 +159,9 @@ scrape_configs:
 - **grafana**: Visualization dashboards
 - **postgres-exporter**: PostgreSQL metrics exporter
 - **redis-exporter**: Redis metrics exporter
+- **cadvisor**: Container resource monitoring
+- **node-exporter**: System resource monitoring
+- **newrelic-infra**: New Relic infrastructure agent
 
 ## 🎛️ Grafana Dashboards
 
@@ -129,6 +180,16 @@ scrape_configs:
    - Redis memory usage
    - Hit/miss ratios
    - Key expiration metrics
+
+4. **Container Dashboard**
+   - Container resource usage
+   - Container health status
+   - Docker metrics
+
+5. **System Dashboard**
+   - Host system metrics
+   - CPU, Memory, Disk usage
+   - Network statistics
 
 ### Custom Dashboard Creation
 1. Access Grafana at http://localhost:3000
@@ -176,6 +237,31 @@ rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rat
 redis_connected_clients
 ```
 
+#### Container Performance
+```promql
+# Container CPU usage
+rate(container_cpu_usage_seconds_total[5m])
+
+# Container memory usage
+container_memory_usage_bytes
+
+# Container network I/O
+rate(container_network_receive_bytes_total[5m])
+rate(container_network_transmit_bytes_total[5m])
+```
+
+#### System Performance
+```promql
+# CPU usage percentage
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# Memory usage percentage
+(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+# Disk usage percentage
+100 - ((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes)
+```
+
 ## 🚨 Alerting Rules
 
 ### Critical Alerts
@@ -183,12 +269,16 @@ redis_connected_clients
 - Error rate > 5%
 - Database connections > 80% of max
 - Redis memory usage > 90%
+- Container CPU usage > 90%
+- System memory usage > 95%
 
 ### Warning Alerts
 - API response time > 500ms
 - Error rate > 1%
 - Database connections > 60% of max
 - Redis memory usage > 70%
+- Container CPU usage > 70%
+- System memory usage > 80%
 
 ## 🛠️ Troubleshooting
 
@@ -224,6 +314,36 @@ docker exec -it urlshortener-redis redis-cli ping
 docker-compose -f docker/docker-compose.dev.yml restart postgres-exporter redis-exporter
 ```
 
+#### Container Monitoring Issues
+**Problem**: cAdvisor not showing container metrics
+
+**Solutions**:
+```bash
+# Check cAdvisor is running
+curl http://localhost:8080/containers/
+
+# Verify Docker socket access
+docker exec -it urlshortener-cadvisor-dev ls -la /var/run/docker.sock
+
+# Restart cAdvisor
+docker-compose -f docker/docker-compose.dev.yml restart cadvisor
+```
+
+#### System Monitoring Issues
+**Problem**: Node Exporter not collecting system metrics
+
+**Solutions**:
+```bash
+# Check Node Exporter metrics
+curl http://localhost:9100/metrics
+
+# Verify host filesystem access
+docker exec -it urlshortener-node-exporter-dev ls -la /host/proc
+
+# Restart Node Exporter
+docker-compose -f docker/docker-compose.dev.yml restart node-exporter
+```
+
 #### Grafana Dashboard Issues
 **Problem**: No data in Grafana dashboards
 
@@ -242,11 +362,15 @@ docker-compose -f docker/docker-compose.dev.yml logs prometheus
 docker-compose -f docker/docker-compose.dev.yml logs grafana
 docker-compose -f docker/docker-compose.dev.yml logs postgres-exporter
 docker-compose -f docker/docker-compose.dev.yml logs redis-exporter
+docker-compose -f docker/docker-compose.dev.yml logs cadvisor
+docker-compose -f docker/docker-compose.dev.yml logs node-exporter
 
 # Test metrics endpoints
 curl http://localhost:9090/targets          # Prometheus targets
 curl http://localhost:9187/metrics          # PostgreSQL metrics
 curl http://localhost:9121/metrics          # Redis metrics
+curl http://localhost:8080/metrics          # Container metrics
+curl http://localhost:9100/metrics          # System metrics
 curl http://localhost:5000/metrics          # API metrics
 ```
 
@@ -265,7 +389,13 @@ curl http://localhost:5000/metrics          # API metrics
 ### Exporters
 - [PostgreSQL Exporter](https://github.com/prometheus-community/postgres_exporter)
 - [Redis Exporter](https://github.com/oliver006/redis_exporter)
+- [cAdvisor](https://github.com/google/cadvisor)
+- [Node Exporter](https://github.com/prometheus/node_exporter)
 - [.NET Metrics](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/metrics)
+
+### New Relic
+- [New Relic Infrastructure](https://docs.newrelic.com/docs/infrastructure/)
+- [Docker Monitoring](https://docs.newrelic.com/docs/infrastructure/host-integrations/host-integrations-list/docker-monitoring-integration/)
 
 ## 🎯 Next Steps
 
@@ -274,6 +404,8 @@ curl http://localhost:5000/metrics          # API metrics
 3. **Log Aggregation**: Add ELK stack or Loki for log monitoring
 4. **Distributed Tracing**: Implement Jaeger or Zipkin
 5. **Performance Testing**: Use monitoring during load tests
+6. **Custom Metrics**: Add application-specific business metrics
+7. **Alert Integration**: Connect alerts to Slack/Teams/PagerDuty
 
 ---
 
