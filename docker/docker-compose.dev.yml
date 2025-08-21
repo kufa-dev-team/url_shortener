@@ -71,6 +71,101 @@ services:
     networks:
       - urlshortener-network
 
+  # New Relic Infrastructure Agent
+  newrelic-infra:
+    image: newrelic/infrastructure:latest
+    platform: linux/arm64
+    container_name: urlshortener-newrelic-dev
+    environment:
+      - NRIA_LICENSE_KEY=c6e1e7c9474c5397bcabb2d8c0759efeFFFFNRAL
+      - NRIA_DISPLAY_NAME=URLShortener-Development
+      - NRIA_VERBOSE=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
+    privileged: true
+    pid: host
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Prometheus (metrics storage)
+  prometheus:
+    image: prom/prometheus:latest
+    platform: linux/arm64
+    container_name: urlshortener-prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--log.level=debug'
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Grafana (dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    platform: linux/arm64
+    container_name: urlshortener-grafana-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LOG_LEVEL=debug
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - urlshortener-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # PostgreSQL Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    platform: linux/arm64
+    container_name: urlshortener-postgres-exporter-dev
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/urlshortener?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Redis Exporter
+  redis-exporter:
+    image: oliver006/redis_exporter
+    platform: linux/arm64
+    container_name: urlshortener-redis-exporter-dev
+    environment:
+      REDIS_ADDR: "redis:6379"
+      # No password for dev environment
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local
@@ -78,8 +173,10 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
-
-
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
 networks:
   urlshortener-network:
