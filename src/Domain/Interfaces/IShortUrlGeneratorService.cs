@@ -1,4 +1,4 @@
-
+using Domain.Result;
 
 namespace Domain.Interfaces
 {
