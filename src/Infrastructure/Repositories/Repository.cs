@@ -1,5 +1,6 @@
 using Domain.Entities;
 using Domain.Interfaces;
+using Domain.Result;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 // ADVANCED C# GEMS: Add these using statements for advanced features
@@ -64,7 +65,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         // };
     }
 
-    public async Task<T?> GetByIdAsync(int id)
+    public async Task<Result<T?>> GetByIdAsync(int id)
     {
         // ADVANCED C# GEM: Guard clauses with throw expressions (C# 7.0)
         // ArgumentOutOfRangeException.ThrowIfNegativeOrZero(id);
@@ -121,11 +122,14 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         //     end";
         // var result = await _redisDatabase.ScriptEvaluateAsync(luaScript, new RedisKey[] { cacheKey }, 
         //                                                       new RedisValue[] { serializedEntity, (int)DefaultCacheExpiry.TotalSeconds });
-        
-        return await _dbSet.FindAsync(id);
+        try {
+            return new Success<T?>(await _dbSet.FindAsync(id));
+        } catch (Exception ex) {
+            return new Failure<T?>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
+        }
     }
 
-    public async Task<IEnumerable<T>> GetAllAsync()
+    public async Task<Result<IEnumerable<T>>> GetAllAsync()
     {
         // BASIC LINQ: Filtering and sorting
         // return await _dbSet.Where(x => x.IsActive).OrderBy(x => x.CreatedAt).ToListAsync();
@@ -141,10 +145,14 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         
         // PERFORMANCE: Use AsNoTracking() for read-only data
         // return await _dbSet.AsNoTracking().ToListAsync();
-        return await _dbSet.ToListAsync();
+        try {
+            return new Success<IEnumerable<T>>(await _dbSet.ToListAsync());
+        } catch (Exception ex) {
+            return new Failure<IEnumerable<T>>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
+        }
     }
 
-    public async Task<T> AddAsync(T entity)
+    public async Task<Result<T>> AddAsync(T entity)
     {
         // ADVANCED C# GEM: Null-coalescing assignment with throw expression
         ArgumentNullException.ThrowIfNull(entity);
@@ -226,7 +234,11 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         // await InvalidateCacheAsync(entity.Id);
         // _ = Task.Run(async () => await WarmCacheAsync(entity.Id)); // Fire and forget
         
-        return entity;
+        try {
+            return new Success<T>(entity);
+        } catch (Exception ex) {
+            return new Failure<T>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
+        }
     }
 
     public async Task UpdateAsync(T entity)
@@ -313,7 +325,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         // await PublishDomainEvent(new EntityUpdatedEvent<T>(entity));
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<Error?> DeleteAsync(int id)
     {
         // Good use of LINQ! Consider adding validation:
         // var exists = await _dbSet.AnyAsync(e => e.Id == id);
@@ -368,7 +380,12 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         //     await Task.WhenAll(tasks);
         // }
         
-        await _dbSet.Where(e => e.Id == id).ExecuteDeleteAsync();
+        try {
+            await _dbSet.Where(e => e.Id == id).ExecuteDeleteAsync();
+            return null;
+        } catch (Exception ex) {
+            return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 
     // ADVANCED C# GEMS: Extension methods you might want to add:
