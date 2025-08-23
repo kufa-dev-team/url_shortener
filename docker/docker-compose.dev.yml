@@ -76,8 +76,9 @@ services:
     image: newrelic/infrastructure:latest
     platform: linux/arm64
     container_name: urlshortener-newrelic-dev
+    env_file:
+      - ../.env
     environment:
-      - NRIA_LICENSE_KEY=c6e1e7c9474c5397bcabb2d8c0759efeFFFFNRAL
       - NRIA_DISPLAY_NAME=URLShortener-Development
       - NRIA_VERBOSE=1
     volumes:
