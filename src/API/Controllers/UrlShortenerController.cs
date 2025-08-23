@@ -49,7 +49,7 @@ namespace API.Controllers
                         Id = url.res.Id,
                         ShortCode = url.res.ShortCode,
                         OriginalUrl = url.res.OriginalUrl,
-                        ShortUrl = $"https://ShortUrl/{url.res.ShortCode}",
+                        ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.res.ShortCode}",
                         CreatedAt = url.res.CreatedAt,
                         UpdatedAt = url.res.UpdatedAt,
                         Title = url.res.Title,
@@ -118,7 +118,7 @@ namespace API.Controllers
                 Id = updatedUrl.Id,
                 ShortCode = updatedUrl.ShortCode,
                 OriginalUrl = updatedUrl.OriginalUrl,
-                ShortUrl = $"https://{updatedUrl.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{updatedUrl.ShortCode}",
                 Title = updatedUrl.Title,
                 Description = updatedUrl.Description,
                 ExpiresAt = updatedUrl.ExpiresAt,
@@ -139,7 +139,7 @@ namespace API.Controllers
             {
                 OriginalUrl = um.OriginalUrl,
                 ShortCode = um.ShortCode,
-                ShortUrl = $"https//:localhost/{um.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
                 CreatedAt = um.CreatedAt,
                 ClickCount = um.ClickCount,
                 ExpiresAt = um.ExpiresAt,
@@ -164,7 +164,7 @@ namespace API.Controllers
                 Id = url.Id,
                 ShortCode = url.ShortCode,
                 OriginalUrl = url.OriginalUrl,
-                ShortUrl = $"https://{url.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.ShortCode}",
                 Title = url.Title,
                 Description = url.Description,
                 ExpiresAt = url.ExpiresAt,
@@ -175,9 +175,9 @@ namespace API.Controllers
         [HttpGet("MostClicked/{limit}")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetMostClickedUrl(int limit)
         {
-            if (limit <= 0 || limit > 100)
+            if (limit <= 0 || limit > 10000000)
             {
-                return BadRequest("Limit must be between 1 and 100");
+                return BadRequest("Limit must be between 1 and 10000000");
             }
             var popularUrlsResult = await _urlMappingService.GetMostClickedUrlsAsync(limit);
             if (popularUrlsResult is Failure<IEnumerable<UrlMapping>> popularUrlsFailure) {
@@ -188,7 +188,7 @@ namespace API.Controllers
             {
                 Id = um.Id,
                 OriginalUrl = um.OriginalUrl,
-                ShortUrl = $"https://{um.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
                 ShortCode = um.ShortCode,
                 Title = um.Title,
                 Description = um.Description,
@@ -211,7 +211,7 @@ namespace API.Controllers
                 {
                     Id = um.Id,
                     OriginalUrl = um.OriginalUrl,
-                    ShortUrl = $"https://{um.ShortCode}",
+                    ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
                     ShortCode = um.ShortCode,
                     Title = um.Title,
                     Description = um.Description,
@@ -221,17 +221,30 @@ namespace API.Controllers
                     CreatedAt = um.CreatedAt
                 }));
         }
-        [HttpGet("RedirectRoOriginalUrl/{shortCode}")]
-        public async Task<ActionResult<String>> RedirectToOriginalUrl(string shortCode)
+        // Redirect endpoint: GET /{shortCode}
+        // This endpoint returns a 302 redirect to the original URL if found, or 404 if not found.
+        [HttpGet("{shortCode}")]
+        [ProducesResponseType(StatusCodes.Status302Found)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RedirectByShortCode(string shortCode)
         {
-                var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-                if (originalUrlResult is Failure<string> originalUrlFailure) {
-                    return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
-                }
-                var originalUrl = (originalUrlResult as Success<string>)?.res;
-                if (string.IsNullOrEmpty(originalUrl))
-                    return NotFound("Short URL not found");
-                return originalUrl;
+            _logger.LogTrace("Redirect requested for short code: {ShortCode}", shortCode);
+
+            var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
+            if (originalUrlResult is Failure<string> originalUrlFailure) {
+                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
+                return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
+            }
+            var originalUrl = (originalUrlResult as Success<string>)?.res;
+
+            if (string.IsNullOrEmpty(originalUrl))
+            {
+                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
+                return NotFound("Short URL not found");
+            }
+
+            _logger.LogInformation("Redirecting short code {ShortCode} to {OriginalUrl}", shortCode, originalUrl);
+            return Redirect(originalUrl);
         }
 
         [HttpPost("DeactivateExpired")]
@@ -243,6 +256,7 @@ namespace API.Controllers
             }
             return NoContent();
         }
+
         
     }
 }

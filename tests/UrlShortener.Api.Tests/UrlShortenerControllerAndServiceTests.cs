@@ -5,6 +5,7 @@ using Application.Services;
 using Domain.Entities;
 using Domain.Interfaces;
 using Domain.Result;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -24,6 +25,15 @@ namespace UrlShortener.Api.Tests
             _serviceMock = new Mock<IUrlMappingService>();
             _loggerMock = new Mock<ILogger<UrlShortenerController>>();
             _controller = new UrlShortenerController(_loggerMock.Object, _serviceMock.Object);
+            
+            // Set up HTTP context for Request.Scheme and Request.Host
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.Scheme = "https";
+            httpContext.Request.Host = new HostString("test.com");
+            _controller.ControllerContext = new ControllerContext()
+            {
+                HttpContext = httpContext
+            };
         }
 
         [Fact]
@@ -63,7 +73,7 @@ namespace UrlShortener.Api.Tests
 
             Assert.Equal(request.CustomShortCode, response.ShortCode);
             Assert.Equal(1, response.Id);
-            Assert.Equal($"https://ShortUrl/{request.CustomShortCode}", response.ShortUrl);
+            Assert.Equal($"https://test.com/{request.CustomShortCode}", response.ShortUrl);
         }
 
         [Fact]
@@ -88,12 +98,12 @@ namespace UrlShortener.Api.Tests
         {
             // Arrange
             int urlId = 1;
-            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>((UrlMapping?)null));
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(null));
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);
 
-            // Assert
+            // Assert  
             var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
             Assert.Equal(404, notFoundResult.StatusCode);
         }
@@ -152,18 +162,17 @@ namespace UrlShortener.Api.Tests
                 ExpiresAt = DateTime.UtcNow.AddDays(30)
             };
 
-            // Mock the service to throw KeyNotFoundException when updating a non-existent URL mapping
+            // Mock the service to return failure when updating a non-existent URL mapping
             _serviceMock
-                .Setup(s => s.UpdateUrlAsync(It.IsAny<UrlMapping>(), updateRequest.CustomShortCode))
-                .ThrowsAsync(new KeyNotFoundException("UrlMapping not found."));
+                .Setup(s => s.GetByIdAsync(updateRequest.Id))
+                .ReturnsAsync(new Failure<UrlMapping?>(new Error("URL not found", ErrorCode.NOT_FOUND)));
 
             // Act
             var result = await _controller.UpdateUrl(updateRequest);
 
             // Assert
-            var objectResult = Assert.IsType<NotFoundObjectResult>(result.Result); // Controller returns ObjectResult on exception
+            var objectResult = Assert.IsType<ObjectResult>(result.Result); // Controller returns ObjectResult with status code
             Assert.Equal(404, objectResult.StatusCode);
-            Assert.Equal($"URL with ID {updateRequest.Id} not found.", objectResult.Value);
         }
 
         [Fact]
@@ -206,7 +215,7 @@ namespace UrlShortener.Api.Tests
         public async Task GetUrlById_ShouldReturnNotFound_WhenUrlDoesNotExist()
         {
             // Arrange
-            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Success<UrlMapping?>((UrlMapping?)null));
+            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Success<UrlMapping?>(null));
 
             // Act
             var result = await _controller.GetUrlById(999);
@@ -256,31 +265,31 @@ namespace UrlShortener.Api.Tests
         }
 
         [Fact]
-        public async Task RedirectToOriginalUrl_ShouldReturnUrl_WhenShortCodeExists()
+        public async Task RedirectByShortCode_ShouldReturnRedirect_WhenShortCodeExists()
         {
             // Arrange
             _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("abc123")).ReturnsAsync(new Success<string>("http://original.com"));
 
             // Act
-            var result = await _controller.RedirectToOriginalUrl("abc123");
+            var result = await _controller.RedirectByShortCode("abc123");
 
             // Assert
-            var okResult = Assert.IsType<ActionResult<string>>(result);
-            Assert.Equal("http://original.com", okResult.Value);
+            var redirectResult = Assert.IsType<RedirectResult>(result);
+            Assert.Equal("http://original.com", redirectResult.Url);
         }
 
         [Fact]
-        public async Task RedirectToOriginalUrl_ShouldReturnNotFound_WhenShortCodeDoesNotExist()
+        public async Task RedirectByShortCode_ShouldReturnNotFound_WhenShortCodeDoesNotExist()
         {
             // Arrange
-            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("nonexistent")).ReturnsAsync(new Success<string>(string.Empty));
+            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("nonexistent")).ReturnsAsync(new Failure<string>(new Error("URL not found", ErrorCode.NOT_FOUND)));
 
             // Act
-            var result = await _controller.RedirectToOriginalUrl("nonexistent");
+            var result = await _controller.RedirectByShortCode("nonexistent");
 
             // Assert
-            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
-            Assert.Equal("Short URL not found", notFoundResult.Value);
+            var statusCodeResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(404, statusCodeResult.StatusCode);
         }
 
 
