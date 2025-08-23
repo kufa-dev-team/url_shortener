@@ -46,11 +46,10 @@ namespace API.Controllers
                     new { id = url.res.Id },
                     new CreateUrlMappingResponse
                     {
-<<<<<<< HEAD
                         Id = url.res.Id,
                         ShortCode = url.res.ShortCode,
                         OriginalUrl = url.res.OriginalUrl,
-                        ShortUrl = $"https://ShortUrl/{url.res.ShortCode}",
+                        ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.res.ShortCode}",
                         CreatedAt = url.res.CreatedAt,
                         UpdatedAt = url.res.UpdatedAt,
                         Title = url.res.Title,
@@ -58,19 +57,6 @@ namespace API.Controllers
                         ExpiresAt = url.res.ExpiresAt,
                         IsActive = url.res.IsActive,
                         ClickCount = url.res.ClickCount
-=======
-                        Id = CreatedUrl.Id,
-                        ShortCode = CreatedUrl.ShortCode,
-                        OriginalUrl = CreatedUrl.OriginalUrl,
-                        ShortUrl = $"https://{CreatedUrl.ShortCode}",
-                        CreatedAt = CreatedUrl.CreatedAt,
-                        UpdatedAt = CreatedUrl.UpdatedAt,
-                        Title = CreatedUrl.Title,
-                        Description = CreatedUrl.Description,
-                        ExpiresAt = CreatedUrl.ExpiresAt,
-                        IsActive = CreatedUrl.IsActive,
-                        ClickCount = CreatedUrl.ClickCount
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
                     }
                 );
             }
@@ -125,7 +111,7 @@ namespace API.Controllers
                 Id = updatedUrl.Id,
                 ShortCode = updatedUrl.ShortCode,
                 OriginalUrl = updatedUrl.OriginalUrl,
-                ShortUrl = $"https://{updatedUrl.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{updatedUrl.ShortCode}",
                 Title = updatedUrl.Title,
                 Description = updatedUrl.Description,
                 ExpiresAt = updatedUrl.ExpiresAt,
@@ -171,7 +157,7 @@ namespace API.Controllers
                 Id = url.Id,
                 ShortCode = url.ShortCode,
                 OriginalUrl = url.OriginalUrl,
-                ShortUrl = $"https://{url.ShortCode}",
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.ShortCode}",
                 Title = url.Title,
                 Description = url.Description,
                 ExpiresAt = url.ExpiresAt,
@@ -235,44 +221,23 @@ namespace API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RedirectByShortCode(string shortCode)
         {
-<<<<<<< HEAD
-                var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-                if (originalUrlResult is Failure<string> originalUrlFailure) {
-                    return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
-                }
-                var originalUrl = (originalUrlResult as Success<string>)?.res;
-=======
             _logger.LogTrace("Redirect requested for short code: {ShortCode}", shortCode);
 
-            try
-            {
-                var originalUrl = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
-                if (string.IsNullOrEmpty(originalUrl))
-                {
-                    _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
-                    return NotFound("Short URL not found");
-<<<<<<< HEAD
-                return originalUrl;
-=======
-                }
-
-                _logger.LogInformation("Redirecting short code {ShortCode} to {OriginalUrl}", shortCode, originalUrl);
-                return Redirect(originalUrl); // Returns 302 Found
-               // return Ok(new { originalUrl = originalUrl, message = "Redirect would go here" });//his is for testing purposes, replace with Redirect(original
+            var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
+            if (originalUrlResult is Failure<string> originalUrlFailure) {
+                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
+                return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
             }
-            catch (KeyNotFoundException)
+            var originalUrl = (originalUrlResult as Success<string>)?.res;
+
+            if (string.IsNullOrEmpty(originalUrl))
             {
-                _logger.LogWarning("Short code not found or inactive: {ShortCode}", shortCode);
+                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
                 return NotFound("Short URL not found");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during redirect for short code: {ShortCode}", shortCode);
-                return StatusCode(500, "Internal server error");
-            }
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
+
+            _logger.LogInformation("Redirecting short code {ShortCode} to {OriginalUrl}", shortCode, originalUrl);
+            return Redirect(originalUrl);
         }
 
         [HttpPost("DeactivateExpired")]

@@ -93,7 +93,6 @@ namespace Application.Services
                 }
 
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
-<<<<<<< HEAD
                 if (createdUrlMapping is Success<UrlMapping> mapping) {
                     await _unitOfWork.SaveChangesAsync();
 
@@ -106,19 +105,6 @@ namespace Application.Services
                     }
                     await _unitOfWork.CommitTransactionAsync();
                 }
-=======
-                await _unitOfWork.SaveChangesAsync();
-
-                // Cache the full entity in Redis by id and by short code
-                if (_redis != null)
-                {
-                    var entityJson = System.Text.Json.JsonSerializer.Serialize(createdUrlMapping);
-                    await _redis.StringSetAsync($"url:id:{createdUrlMapping.Id}", entityJson, TimeSpan.FromDays(1));
-                    await _redis.StringSetAsync($"url:short:{createdUrlMapping.ShortCode}", entityJson, TimeSpan.FromDays(1));
-                }
-
-                await _unitOfWork.CommitTransactionAsync();
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
                 return createdUrlMapping;
             }
             catch (Exception ex)
@@ -224,25 +210,17 @@ namespace Application.Services
                     var cached = await _redis.StringGetAsync(cacheKey);
                     if (cached.HasValue)
                     {
-<<<<<<< HEAD
                         var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
                         return new Success<UrlMapping?>(cachedEntity);
-=======
-                        return System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
                     }
                 }
                
                 // If not found in cache, get from database
-<<<<<<< HEAD
                 var url = await _urlMappingRepository.GetByIdAsync(Id);
                 if (url is Failure<UrlMapping> urlFailure) {
                     return new Failure<UrlMapping?>(new Error(urlFailure.error.message, urlFailure.error.code));
                 }
                 var entity = (url as Success<UrlMapping>)?.res;
-=======
-                var entity = await _urlMappingRepository.GetByIdAsync(Id);
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
 
                 // Cache if Redis available and entity found
                 if (entity != null && _redis != null)
@@ -251,11 +229,7 @@ namespace Application.Services
                     await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
                 }
 
-<<<<<<< HEAD
                 return new Success<UrlMapping?>(entity);
-=======
-                return entity;
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
             }
             catch (Exception ex)
             {
@@ -264,11 +238,7 @@ namespace Application.Services
             }
         }
 
-<<<<<<< HEAD
         public async Task<Result<UrlMapping?>> GetByShortCodeAsync(string shortCode)
-=======
-        public async Task<String?> GetByShortCodeAsync(string shortCode)
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
         {
             if (string.IsNullOrWhiteSpace(shortCode))
             {
@@ -279,7 +249,6 @@ namespace Application.Services
             try
             {
                 // Try Redis cache first (if available)
-<<<<<<< HEAD
                 if (_redis != null)
                 {
                     var cacheKey = $"url:short:{shortCode}";
@@ -306,28 +275,6 @@ namespace Application.Services
                 }
 
                 return new Success<UrlMapping?>(entity);
-=======
-                var cacheKey = $"url:short:{shortCode}";
-                var cached = await _redis.StringGetAsync(cacheKey);
-                if (cached.HasValue)
-                {
-                    var EntityCached= System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
-                    return EntityCached?.OriginalUrl ?? string.Empty;
-                }
-
-
-                // Get from database
-                var entity = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
-
-                // Cache if Redis available and entity found
-                if (entity != null)
-                {
-                    var cacheKey2 = $"url:short:{shortCode}";
-                    await _redis.StringSetAsync(cacheKey2, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
-                }
-
-                return entity.OriginalUrl ?? string.Empty;
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
             }
             catch (Exception ex)
             {
@@ -366,7 +313,6 @@ namespace Application.Services
                 _logger.LogError("Short code cannot be null or empty.");
                 return new Failure<string>(new Error("Invalid short code", ErrorCode.BAD_REQUEST));
             }
-<<<<<<< HEAD
             var cacheKey = $"url:short:{shortCode}";
             if (_redis != null)
             {
@@ -380,16 +326,6 @@ namespace Application.Services
                         return new Success<string>(entity.OriginalUrl);
                     }
                 }
-=======
-
-            var cacheKey = $"url:short:{shortCode}";
-            var cached = await _redis.StringGetAsync(cacheKey);
-            if (cached.HasValue)
-            {
-                // Deserialize and return only the OriginalUrl
-                var entity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
-                return entity?.OriginalUrl ?? string.Empty;
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
             }
 
             // If not found in cache, get from database
@@ -410,29 +346,15 @@ namespace Application.Services
                 var entityJson = System.Text.Json.JsonSerializer.Serialize(url);
                 await _redis.StringSetAsync(cacheKey, entityJson, TimeSpan.FromDays(1));
             }
-<<<<<<< HEAD
-=======
-
-            // Store the full entity in cache for next time (TTL 1 day)
-            if (_redis != null)
-            {
-                var entityJson = System.Text.Json.JsonSerializer.Serialize(urlMapping);
-                await _redis.StringSetAsync(cacheKey, entityJson, TimeSpan.FromDays(1));
-            }
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-<<<<<<< HEAD
                 // Atomic counter update
                 var error = await _urlMappingRepository.IncrementClickCountAsync(url.Id);
                 if (error != null) {
                     return new Failure<string>(error);
                 }
-=======
-                await _urlMappingRepository.IncrementClickCountAsync(urlMapping.Id);
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
                 await _unitOfWork.CommitTransactionAsync();
                 return new Success<string>(url.OriginalUrl);
             }
@@ -440,11 +362,7 @@ namespace Application.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error processing redirect for {ShortCode}", shortCode);
-<<<<<<< HEAD
                 return new Failure<string>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
-=======
-                throw;
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
             }
         }
 
@@ -455,7 +373,6 @@ namespace Application.Services
                 _logger.LogError("Attempted to update a null UrlMapping.");
                 return new Failure<UrlMapping>(new Error("UrlMapping cannot be null.", ErrorCode.BAD_REQUEST));
             }
-<<<<<<< HEAD
             
             var existingMappingResult = await _urlMappingRepository.GetByIdAsync(urlMapping.Id);
             if (existingMappingResult is Failure<UrlMapping> existingMappingFailure) {
@@ -463,13 +380,7 @@ namespace Application.Services
             }
             var existingMapping = (existingMappingResult as Success<UrlMapping>)!.res;
             
-=======
-
-            var existingMapping = await _urlMappingRepository.GetByIdAsync(urlMapping.Id) ?? throw new KeyNotFoundException("UrlMapping not found.");
-
             string oldShortCode = existingMapping.ShortCode;
-
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
             if (!string.IsNullOrWhiteSpace(customShortCode))
             {
                 if (customShortCode.Length != _shortCodeLength)
@@ -553,11 +464,7 @@ namespace Application.Services
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
-<<<<<<< HEAD
-                return new Success<UrlMapping>(existingMapping);  // Return the updated entity
-=======
-                return existingMapping;
->>>>>>> 7f82666 (feat: implement URL redirect endpoint)
+                return new Success<UrlMapping>(existingMapping);
             }
             catch (Exception ex)
             {
