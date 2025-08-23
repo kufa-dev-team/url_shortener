@@ -58,7 +58,7 @@ services:
     platform: linux/arm64
     container_name: urlshortener-pgadmin
     ports:
-      - "8080:80"
+      - "8082:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -71,6 +71,142 @@ services:
     networks:
       - urlshortener-network
 
+  # New Relic Infrastructure Agent
+  newrelic-infra:
+    image: newrelic/infrastructure:latest
+    platform: linux/arm64
+    container_name: urlshortener-newrelic-dev
+    env_file:
+      - ../.env
+    environment:
+      - NRIA_DISPLAY_NAME=URLShortener-Development
+      - NRIA_VERBOSE=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
+    privileged: true
+    pid: host
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Prometheus (metrics storage)
+  prometheus:
+    image: prom/prometheus:latest
+    platform: linux/arm64
+    container_name: urlshortener-prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--log.level=debug'
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Grafana (dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    platform: linux/arm64
+    container_name: urlshortener-grafana-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LOG_LEVEL=debug
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - urlshortener-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # PostgreSQL Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    platform: linux/arm64
+    container_name: urlshortener-postgres-exporter-dev
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/urlshortener?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Redis Exporter
+  redis-exporter:
+    image: oliver006/redis_exporter
+    platform: linux/arm64
+    container_name: urlshortener-redis-exporter-dev
+    environment:
+      REDIS_ADDR: "redis:6379"
+      # No password for dev environment
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # cAdvisor (Container monitoring)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    platform: linux/arm64
+    container_name: urlshortener-cadvisor-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
+  # Node Exporter (System monitoring)
+  node-exporter:
+    image: prom/node-exporter:latest
+    platform: linux/arm64
+    container_name: urlshortener-node-exporter-dev
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local
@@ -78,8 +214,10 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
-
-
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
 networks:
   urlshortener-network:

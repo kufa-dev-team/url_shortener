@@ -5,9 +5,10 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using NewRelic.Api.Agent;
+using Prometheus;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
@@ -34,21 +35,17 @@ if (!string.IsNullOrEmpty(redisPassword))
     redisConnectionString += $",password={redisPassword}";
 }
 
-builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString, name: "database", tags: new[] { "db", "postgresql" })
-    .AddRedis(redisConnectionString, name: "redis-cache", tags: new[] { "cache", "redis" });
-
 builder.Services.AddScoped<IUrlMappingService, UrlMappingService>();
 
 // Add application layers
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Configuration);
 
-
-
-
-
-
+// Add health checks with Prometheus integration
+builder.Services.AddHealthChecks()
+    .AddNpgSql(connectionString, name: "database", tags: new[] { "db", "postgresql" })
+    .AddRedis(redisConnectionString, name: "redis-cache", tags: new[] { "cache", "redis" })
+    .ForwardToPrometheus();
 
 var app = builder.Build();
 
@@ -60,6 +57,11 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 
 }
+
+// Add metrics endpoint
+app.UseRouting();
+app.UseHttpMetrics(); // Add this for HTTP metrics
+app.MapMetrics(); // Add this to expose /metrics endpoint
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
