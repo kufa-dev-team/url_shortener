@@ -4,6 +4,7 @@ using API.DTOs.UrlMapping;
 using Application.Services;
 using Domain.Entities;
 using Domain.Interfaces;
+using Domain.Result;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -51,7 +52,7 @@ namespace UrlShortener.Api.Tests
 
             _serviceMock
                 .Setup(s => s.CreateUrlMappingAsync(It.IsAny<UrlMapping>(), request.CustomShortCode))
-                .ReturnsAsync(createdUrl);
+                .ReturnsAsync(new Success<UrlMapping>(createdUrl));
 
             // Act
             var result = await _controller.CreateShortUrl(request);
@@ -72,8 +73,8 @@ namespace UrlShortener.Api.Tests
             int urlId = 1;
             var existingUrl = new UrlMapping { Id = urlId, ShortCode = "EAGA2025" };
 
-            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(existingUrl);
-            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).Returns(Task.CompletedTask);
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
+            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync((Error?)null);
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);
@@ -87,7 +88,7 @@ namespace UrlShortener.Api.Tests
         {
             // Arrange
             int urlId = 1;
-            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync((UrlMapping?)null);
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>((UrlMapping?)null));
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);
@@ -123,9 +124,9 @@ namespace UrlShortener.Api.Tests
                 IsActive = updateRequest.IsActive
             };
 
-            _serviceMock.Setup(s => s.GetByIdAsync(updateRequest.Id)).ReturnsAsync(existingUrl);
+            _serviceMock.Setup(s => s.GetByIdAsync(updateRequest.Id)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
             _serviceMock.Setup(s => s.UpdateUrlAsync(It.IsAny<UrlMapping>(), updateRequest.CustomShortCode))
-                        .ReturnsAsync(updatedUrl);
+                        .ReturnsAsync(new Success<UrlMapping>(updatedUrl));
 
             // Act
             var result = await _controller.UpdateUrl(updateRequest);
@@ -174,7 +175,7 @@ namespace UrlShortener.Api.Tests
                 new UrlMapping { Id = 1, ShortCode = "abc123", OriginalUrl = "http://example1.com" },
                 new UrlMapping { Id = 2, ShortCode = "def456", OriginalUrl = "http://example2.com" }
             };
-            _serviceMock.Setup(s => s.GetAllUrlsAsync()).ReturnsAsync(urls);
+            _serviceMock.Setup(s => s.GetAllUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
 
             // Act
             var result = await _controller.GetAllUrls();
@@ -190,7 +191,7 @@ namespace UrlShortener.Api.Tests
         {
             // Arrange
             var url = new UrlMapping { Id = 1, ShortCode = "abc123", OriginalUrl = "http://example.com" };
-            _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(url);
+            _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(new Success<UrlMapping?>(url));
 
             // Act
             var result = await _controller.GetUrlById(1);
@@ -205,7 +206,7 @@ namespace UrlShortener.Api.Tests
         public async Task GetUrlById_ShouldReturnNotFound_WhenUrlDoesNotExist()
         {
             // Arrange
-            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((UrlMapping?)null);
+            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Success<UrlMapping?>((UrlMapping?)null));
 
             // Act
             var result = await _controller.GetUrlById(999);
@@ -223,7 +224,7 @@ namespace UrlShortener.Api.Tests
             {
                 new UrlMapping { Id = 1, ShortCode = "active1", OriginalUrl = "http://active.com", IsActive = true },
             };
-            _serviceMock.Setup(s => s.GetActiveUrlsAsync()).ReturnsAsync(urls);
+            _serviceMock.Setup(s => s.GetActiveUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
 
             // Act
             var result = await _controller.GetActiveUrls();
@@ -243,7 +244,7 @@ namespace UrlShortener.Api.Tests
                 new UrlMapping { Id = 1, ShortCode = "most1", OriginalUrl = "http://popular.com", ClickCount = 10 },
                 new UrlMapping { Id = 2, ShortCode = "most2", OriginalUrl = "http://popular2.com", ClickCount = 8 }
             };
-            _serviceMock.Setup(s => s.GetMostClickedUrlsAsync(2)).ReturnsAsync(urls);
+            _serviceMock.Setup(s => s.GetMostClickedUrlsAsync(2)).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
 
             // Act
             var result = await _controller.GetMostClickedUrl(2);
@@ -258,7 +259,7 @@ namespace UrlShortener.Api.Tests
         public async Task RedirectToOriginalUrl_ShouldReturnUrl_WhenShortCodeExists()
         {
             // Arrange
-            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("abc123")).ReturnsAsync("http://original.com");
+            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("abc123")).ReturnsAsync(new Success<string>("http://original.com"));
 
             // Act
             var result = await _controller.RedirectToOriginalUrl("abc123");
@@ -272,7 +273,7 @@ namespace UrlShortener.Api.Tests
         public async Task RedirectToOriginalUrl_ShouldReturnNotFound_WhenShortCodeDoesNotExist()
         {
             // Arrange
-            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("nonexistent")).ReturnsAsync(string.Empty);
+            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("nonexistent")).ReturnsAsync(new Success<string>(string.Empty));
 
             // Act
             var result = await _controller.RedirectToOriginalUrl("nonexistent");
@@ -307,7 +308,7 @@ namespace UrlShortener.Api.Tests
                 new UrlMapping { Id = 1, IsActive = true, ExpiresAt = DateTime.UtcNow.AddDays(-1) },
                 new UrlMapping { Id = 2, IsActive = true, ExpiresAt = DateTime.UtcNow.AddHours(-2) }
             };
-            mockRepo.Setup(r => r.GetExpiredUrlsAsync()).ReturnsAsync(expiredUrls);
+            mockRepo.Setup(r => r.GetExpiredUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(expiredUrls));
             mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync(1);
             //Act

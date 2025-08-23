@@ -29,6 +29,12 @@ namespace Infrastructure.Repositories
         // Implement the methods defined in the IUrlMappingRepository interface
         public async Task<Result<UrlMapping>> AddAsync(UrlMapping entity)
         {
+            if (entity == null)
+            {
+                _logger.LogError("Attempted to add a null UrlMapping entity");
+                throw new ArgumentNullException(nameof(entity), "UrlMapping entity cannot be null");
+            }
+            
             try {
                 // Add the UrlMapping entity to the DbSet and return the added entity
                 var AddedUrl = await _dbSet.AddAsync(entity);
@@ -60,6 +66,12 @@ namespace Infrastructure.Repositories
 
         public Task UpdateAsync(UrlMapping urlMapping)
         {
+            if (urlMapping == null)
+            {
+                _logger.LogError("Attempted to update a null UrlMapping entity");
+                throw new ArgumentNullException(nameof(urlMapping), "UrlMapping entity cannot be null");
+            }
+            
             /*
             the method is not anync because we are not using any async operations inside it
             we are just updating the entity in the DbSet
@@ -140,6 +152,18 @@ namespace Infrastructure.Repositories
         }
         public async Task<Result<UrlMapping?>> GetByShortCodeAsync(string shortCode)
         {
+            if (shortCode == null)
+            {
+                _logger.LogError("Short code cannot be null");
+                throw new ArgumentNullException(nameof(shortCode), "Short code cannot be null");
+            }
+            
+            if (string.IsNullOrEmpty(shortCode))
+            {
+                _logger.LogError("Short code cannot be empty");
+                throw new ArgumentException("Short code cannot be empty", nameof(shortCode));
+            }
+            
             try {
                 var url = await _dbSet.Where(u => u.ShortCode == shortCode)
                 .FirstOrDefaultAsync();

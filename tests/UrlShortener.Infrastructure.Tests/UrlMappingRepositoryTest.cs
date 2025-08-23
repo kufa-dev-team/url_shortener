@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Domain.Entities;
+using Domain.Result;
 using Moq;
 using Infrastructure.Repositories;
 using Infrastructure.Data;
@@ -25,6 +26,44 @@ public class UrlMappingRepositoryTest
         _repository = new UrlMappingRepository(_context, _loggerMock.Object);
     }
     
+    // Helper method to get value from Result<T>
+    private T GetResultValue<T>(Result<T> result)
+    {
+        if (result is Success<T> success)
+            return success.res;
+        throw new InvalidOperationException("Result is not a success");
+    }
+    
+    // Helper method to check if result is success
+    private bool IsSuccess<T>(Result<T> result)
+    {
+        return result.is_success();
+    }
+    
+    // Specialized helper for UrlMapping
+    private UrlMapping GetUrlMappingValue(Result<UrlMapping> result)
+    {
+        if (result is Success<UrlMapping> success)
+            return success.res;
+        throw new InvalidOperationException("Result is not a success");
+    }
+    
+    // Specialized helper for nullable UrlMapping
+    private UrlMapping? GetNullableUrlMappingValue(Result<UrlMapping?> result)
+    {
+        if (result is Success<UrlMapping?> success)
+            return success.res;
+        throw new InvalidOperationException("Result is not a success");
+    }
+    
+    // Specialized helper for IEnumerable<UrlMapping>
+    private IEnumerable<UrlMapping> GetUrlMappingsValue(Result<IEnumerable<UrlMapping>> result)
+    {
+        if (result is Success<IEnumerable<UrlMapping>> success)
+            return success.res;
+        throw new InvalidOperationException("Result is not a success");
+    }
+    
     [Fact]
     public async Task AddAsync_ShouldReturnUrlMapping_WhenTheGivenUrlMappingIsNotNull()
     {
@@ -41,8 +80,10 @@ public class UrlMappingRepositoryTest
         var result = await _repository.AddAsync(urlMapping);
         
         //assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(urlMapping.ShortCode, result.Value.ShortCode);
+        Assert.True(IsSuccess(result));
+        var resultValue = GetUrlMappingValue(result);
+        Assert.NotNull(resultValue);
+        Assert.Equal(urlMapping.ShortCode, resultValue.ShortCode);
         
         /*we will create a new urlmapping and usign the addasync it 
         will be created in the database 
@@ -82,10 +123,11 @@ public class UrlMappingRepositoryTest
         var addedEntity = await _context.UrlMappings.FindAsync(1);
         
         // Act 
-        await _repository.DeleteAsync(1);
+        var deleteResult = await _repository.DeleteAsync(1);
         await _context.SaveChangesAsync(); // Save changes after deletion
         
         // Assert
+        Assert.Null(deleteResult); // DeleteAsync should return null on success
         var deletedEntity = await _context.UrlMappings.FindAsync(1);
         Assert.Null(deletedEntity);
         
@@ -111,9 +153,11 @@ public class UrlMappingRepositoryTest
         var result = await _repository.GetByShortCodeAsync("test123");
         
         // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal("test123", result.Value.ShortCode);
-        Assert.Equal("http://example.com", result.Value.OriginalUrl);
+        Assert.True(IsSuccess(result));
+        var resultValue = GetNullableUrlMappingValue(result);
+        Assert.NotNull(resultValue);
+        Assert.Equal("test123", resultValue.ShortCode);
+        Assert.Equal("http://example.com", resultValue.OriginalUrl);
         
         /*Tests that GetByShortCodeAsync returns the correct UrlMapping when given a valid short code*/
     }
@@ -125,7 +169,9 @@ public class UrlMappingRepositoryTest
         var result = await _repository.GetByShortCodeAsync("nonexistent");
         
         // Assert
-        Assert.Null(result.Value);
+        Assert.True(IsSuccess(result));
+        var resultValue = GetNullableUrlMappingValue(result);
+        Assert.Null(resultValue);
         
         /*Tests that GetByShortCodeAsync returns null when the short code doesn't exist in the database*/
     }
@@ -175,13 +221,14 @@ public class UrlMappingRepositoryTest
         originalMapping.OriginalUrl = "http://updated.com";
         
         // Act
-        var result = await _repository.UpdateAsync(originalMapping);
+        await _repository.UpdateAsync(originalMapping);
         await _context.SaveChangesAsync();
         
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(10, result.Value.ClickCount);
-        Assert.Equal("http://updated.com", result.Value.OriginalUrl);
+        // Assert - Verify the update worked by retrieving the entity again
+        var updatedEntity = await _context.UrlMappings.FindAsync(1);
+        Assert.NotNull(updatedEntity);
+        Assert.Equal(10, updatedEntity.ClickCount);
+        Assert.Equal("http://updated.com", updatedEntity.OriginalUrl);
         
         /*Tests that UpdateAsync successfully modifies an existing UrlMapping.
         Verifies that the changes are persisted correctly.*/
@@ -239,16 +286,18 @@ public class UrlMappingRepositoryTest
         var result = await _repository.GetMostClickedAsync(2);
         
         // Assert
-        Assert.Equal(2, result.Value.Count());
-        Assert.Equal("shortUrl3", result.Value.First().ShortCode); // Should be the most clicked (20)
-        Assert.Equal("shortUrl1", result.Value.Skip(1).First().ShortCode); // Second most clicked (15)
+        Assert.True(IsSuccess(result));
+        var resultValue = GetUrlMappingsValue(result);
+        Assert.Equal(2, resultValue.Count());
+        Assert.Equal("shortUrl3", resultValue.First().ShortCode); // Should be the most clicked (20)
+        Assert.Equal("shortUrl1", resultValue.Skip(1).First().ShortCode); // Second most clicked (15)
         
         /* Tests the GetMostClickedAsync method to ensure it returns the correct number of mappings 
         ordered by click count in descending order.*/
     }
     
     [Fact]
-    public async Task GetMostClickedAsync_ShouldThrowException_WhenLimitIsZero()
+    public async Task GetMostClickedAsync_ShouldReturnFailure_WhenLimitIsZero()
     {
         // Arrange
         var urlMapping1 = new UrlMapping
@@ -284,31 +333,29 @@ public class UrlMappingRepositoryTest
         await _context.SaveChangesAsync();
         
         // Act
-        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-                () => _repository.GetMostClickedAsync(0)
-        );
+        var result = await _repository.GetMostClickedAsync(0);
         
         // Assert
-        Assert.Equal("limit", exception.ParamName);
-        Assert.Equal("Limit must be greater than zero. (Parameter 'limit')", exception.Message);
+        Assert.False(IsSuccess(result));
         
         /* Tests the behavior of GetMostClickedAsync when the limit is zero.
-        Verifies that it throws an ArgumentOutOfRangeException with the correct message.*/
+        Verifies that it returns a failure result.*/
     }
     
     [Fact]
-    public async Task GetMostClickedAsync_ShouldThrowException_WhenLimitIsNegative()
+    public async Task GetMostClickedAsync_ShouldReturnFailure_WhenLimitIsNegative()
     {
         // Arrange
         int negativeLimit = -5;
         
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => _repository.GetMostClickedAsync(negativeLimit)
-        );
+        // Act
+        var result = await _repository.GetMostClickedAsync(negativeLimit);
+        
+        // Assert
+        Assert.False(IsSuccess(result));
         
         /* Tests the behavior of GetMostClickedAsync when the limit is negative.
-        Verifies that it throws an ArgumentOutOfRangeException with the correct message.*/
+        Verifies that it returns a failure result.*/
     }
     
     [Fact]
@@ -341,7 +388,9 @@ public class UrlMappingRepositoryTest
         var result = await _repository.GetMostClickedAsync(5);
         
         // Assert
-        Assert.Empty(result.Value);
+        Assert.True(IsSuccess(result));
+        var resultValue = GetUrlMappingsValue(result);
+        Assert.Empty(resultValue);
         
         /* Tests the scenario where no UrlMappings have clicks.
         Verifies that the method returns an empty collection when all mappings have ClickCount of zero.*/

@@ -71,13 +71,20 @@ namespace API.Controllers
                 return BadRequest("The Id must be larger that Zero ");
             }
 
-            var urlMapping = await _urlMappingService.GetByIdAsync(Id);
+            var urlMappingResult = await _urlMappingService.GetByIdAsync(Id);
+            if (urlMappingResult is Failure<UrlMapping?> urlMappingFailure) {
+                return StatusCode((int)urlMappingFailure.error.code, urlMappingFailure.error.message);
+            }
+            var urlMapping = (urlMappingResult as Success<UrlMapping?>)?.res;
             if (urlMapping == null)
             {
                 return NotFound($"No URL mapping found for Id: {Id}");
             }
 
-            await _urlMappingService.DeleteUrlAsync(Id);
+            var deleteResult = await _urlMappingService.DeleteUrlAsync(Id);
+            if (deleteResult != null) {
+                return StatusCode((int)deleteResult.code, deleteResult.message);
+            }
             return NoContent();
         }
         [HttpPut]
