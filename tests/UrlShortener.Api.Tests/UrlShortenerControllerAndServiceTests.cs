@@ -104,9 +104,8 @@ namespace UrlShortener.Api.Tests
             var result = await _controller.DeleteUrlMapping(urlId);
 
             // Assert  
-            // Note: Since service returns Success<UrlMapping?>(null), controller treats it as found
-            // and proceeds to delete, returning NoContent
-            Assert.IsType<NoContentResult>(result);
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal(404, notFoundResult.StatusCode);
         }
 
         [Fact]
