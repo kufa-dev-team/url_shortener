@@ -84,7 +84,7 @@ namespace UrlShortener.Api.Tests
             var existingUrl = new UrlMapping { Id = urlId, ShortCode = "EAGA2025" };
 
             _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
-            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync((Error?)null);
+            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync(new Success<bool>(true));
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);

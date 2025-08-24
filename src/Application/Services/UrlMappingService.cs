@@ -115,25 +115,25 @@ namespace Application.Services
             }
         }
 
-        public async Task<Error?> DeleteUrlAsync(int id)
+        public async Task<Result<bool>> DeleteUrlAsync(int id)
         {
             if (id <= 0)
             {
                 _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", id);
-                return new Error("Id must be greater than zero.", ErrorCode.BAD_REQUEST);
+                return new Failure<bool>(new Error("Id must be greater than zero.", ErrorCode.BAD_REQUEST));
             }
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
                 var urlMapping = await _urlMappingRepository.GetByIdAsync(id);
-                if (urlMapping is Failure<UrlMapping> urlMappingFailure) {
-                    return new Error(urlMappingFailure.error.message, urlMappingFailure.error.code);
+                if (urlMapping is Failure<UrlMapping?> urlMappingFailure) {
+                    return new Failure<bool>(new Error(urlMappingFailure.error.message, urlMappingFailure.error.code));
                 }
-                var url = (urlMapping as Success<UrlMapping>)!.res;
+                var url = (urlMapping as Success<UrlMapping?>)!.res;
                 if (url == null)
                 {
                     _logger.LogWarning("UrlMapping with Id {Id} not found.", id);
-                    return new Error($"UrlMapping with Id {id} not found.", ErrorCode.NOT_FOUND);
+                    return new Failure<bool>(new Error($"UrlMapping with Id {id} not found.", ErrorCode.NOT_FOUND));
                 }
                 // Delete the URL mapping from the database
                 await _urlMappingRepository.DeleteAsync(id);
@@ -144,18 +144,18 @@ namespace Application.Services
                     await _redis.KeyDeleteAsync($"url:id:{id}");// remove the cache entry for the URL by Id
                 }
                 await _unitOfWork.CommitTransactionAsync();
-                return null;
+                return new Success<bool>(true);
             }
             catch (DbUpdateException dbEx)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(dbEx, "Failed to delete URL with Id: {Id}.", id);
-                return new Error(dbEx.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(dbEx.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting transaction for deletion.");
-                return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
 
@@ -490,14 +490,14 @@ namespace Application.Services
                 return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
-        public async Task<Error?> DeactivateExpiredUrlsAsync()
+        public async Task<Result<bool>> DeactivateExpiredUrlsAsync()
         {
             try
             {
                 // Get all URLs that are active but expired
                 var expiredUrls = await _urlMappingRepository.GetExpiredUrlsAsync();
                 if (expiredUrls is Failure<IEnumerable<UrlMapping>> expiredUrlsFailure) {
-                    return new Error(expiredUrlsFailure.error.message, expiredUrlsFailure.error.code);
+                    return new Failure<bool>(new Error(expiredUrlsFailure.error.message, expiredUrlsFailure.error.code));
                 }
                 var urls = (expiredUrls as Success<IEnumerable<UrlMapping>>)!.res;
                 foreach (var url in urls)
@@ -507,12 +507,12 @@ namespace Application.Services
                 }
 
                 await _unitOfWork.SaveChangesAsync();
-                return null;
+                return new Success<bool>(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deactivating expired URLs");
-                return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
     }

@@ -251,8 +251,8 @@ namespace API.Controllers
         public async Task<IActionResult> DeactivateExpired()
         {
             var deactivateExpiredResult = await _urlMappingService.DeactivateExpiredUrlsAsync();
-            if (deactivateExpiredResult != null) {
-                return StatusCode((int)deactivateExpiredResult.code, deactivateExpiredResult.message);
+            if (deactivateExpiredResult is Failure<bool> deactivateFailure) {
+                return StatusCode((int)deactivateFailure.error.code, deactivateFailure.error.message);
             }
             return NoContent();
         }
