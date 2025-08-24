@@ -211,5 +211,23 @@ namespace Infrastructure.Repositories
             }
         }
 
+        public async Task<Result<int>> DeactivateExpiredUrlsBulkAsync()
+        {
+            try {
+                // Bulk update using ExecuteUpdateAsync - single database operation
+                var updatedCount = await _context.UrlMappings
+                    .Where(u => u.IsActive && u.ExpiresAt < DateTime.UtcNow)
+                    .ExecuteUpdateAsync(u => 
+                        u.SetProperty(x => x.IsActive, false)
+                         .SetProperty(x => x.UpdatedAt, DateTime.UtcNow));
+                
+                _logger.LogInformation("Bulk deactivated {Count} expired URLs", updatedCount);
+                return new Success<int>(updatedCount);
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error bulk deactivating expired URLs");
+                return new Failure<int>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
+            }
+        }
+
     }
 }

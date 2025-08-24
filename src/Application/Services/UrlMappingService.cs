@@ -576,19 +576,15 @@ namespace Application.Services
         {
             try
             {
-                // Get all URLs that are active but expired
-                var expiredUrls = await _urlMappingRepository.GetExpiredUrlsAsync();
-                if (expiredUrls is Failure<IEnumerable<UrlMapping>> expiredUrlsFailure) {
-                    return new Failure<bool>(new Error(expiredUrlsFailure.error.message, expiredUrlsFailure.error.code));
+                // Use bulk operation for optimal performance - single database operation
+                var bulkUpdateResult = await _urlMappingRepository.DeactivateExpiredUrlsBulkAsync();
+                if (bulkUpdateResult is Failure<int> bulkUpdateFailure) {
+                    return new Failure<bool>(new Error(bulkUpdateFailure.error.message, bulkUpdateFailure.error.code));
                 }
-                var urls = (expiredUrls as Success<IEnumerable<UrlMapping>>)!.res;
-                foreach (var url in urls)
-                {
-                    url.IsActive = false;
-                    await _urlMappingRepository.UpdateAsync(url);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
+                
+                var updatedCount = (bulkUpdateResult as Success<int>)!.res;
+                _logger.LogInformation("Successfully deactivated {Count} expired URLs using bulk operation", updatedCount);
+                
                 return new Success<bool>(true);
             }
             catch (Exception ex)
