@@ -64,26 +64,26 @@ namespace API.Controllers
         }
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteUrlMapping(int Id)
+        public async Task<IActionResult> DeleteUrlMapping(int id)
         {
-            if (Id <= 0)
+            if (id <= 0)
             {
                 return BadRequest("The Id must be larger that Zero ");
             }
 
-            var urlMappingResult = await _urlMappingService.GetByIdAsync(Id);
+            var urlMappingResult = await _urlMappingService.GetByIdAsync(id);
             if (urlMappingResult is Failure<UrlMapping?> urlMappingFailure) {
                 return StatusCode((int)urlMappingFailure.error.code, urlMappingFailure.error.message);
             }
             var urlMapping = (urlMappingResult as Success<UrlMapping?>)?.res;
             if (urlMapping == null)
             {
-                return NotFound($"No URL mapping found for Id: {Id}");
+                return NotFound($"No URL mapping found for Id: {id}");
             }
 
-            var deleteResult = await _urlMappingService.DeleteUrlAsync(Id);
-            if (deleteResult != null) {
-                return StatusCode((int)deleteResult.code, deleteResult.message);
+            var deleteResult = await _urlMappingService.DeleteUrlAsync(id);
+            if (deleteResult is Failure<bool> deleteFailure) {
+                return StatusCode((int)deleteFailure.error.code, deleteFailure.error.message);
             }
             return NoContent();
         }
