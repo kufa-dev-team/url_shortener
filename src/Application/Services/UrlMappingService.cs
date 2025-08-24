@@ -225,7 +225,7 @@ namespace Application.Services
                     var cached = await _redis.StringGetAsync(entityCacheKey);
                     if (cached.HasValue && !string.IsNullOrEmpty(cached))
                     {
-                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached.ToString());
                         return new Success<UrlMapping?>(cachedEntity);
                     }
                 }
@@ -283,7 +283,7 @@ namespace Application.Services
                     var cached = await _redis.StringGetAsync(entityCacheKey);
                     if (cached.HasValue && !string.IsNullOrEmpty(cached))
                     {
-                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached.ToString());
                         return new Success<UrlMapping?>(cachedEntity);
                     }
                 }
@@ -361,7 +361,7 @@ namespace Application.Services
                 var redirectCached = await _redis.StringGetAsync(redirectCacheKey);
                 if (redirectCached.HasValue && !string.IsNullOrEmpty(redirectCached))
                 {
-                    var redirectCache = System.Text.Json.JsonSerializer.Deserialize<RedirectCache>(redirectCached);
+                    var redirectCache = System.Text.Json.JsonSerializer.Deserialize<RedirectCache>(redirectCached.ToString());
                     if (redirectCache != null && redirectCache.IsActive && 
                         (!redirectCache.ExpiresAt.HasValue || redirectCache.ExpiresAt > DateTime.UtcNow))
                     {
