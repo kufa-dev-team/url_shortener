@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Runtime.InteropServices.Marshalling;
 using Domain.Result;
 using AutoMapper.Configuration;
+using Application.Models;
 
 
 namespace Application.Services
@@ -96,12 +97,24 @@ namespace Application.Services
                 if (createdUrlMapping is Success<UrlMapping> mapping) {
                     await _unitOfWork.SaveChangesAsync();
 
-                    // Cache the full entity in Redis by id and by short code
+                    // Hybrid caching strategy
                     if (_redis != null)
                     {
+                        // 1. Lightweight redirect cache (high frequency, 6-hour TTL)
+                        var redirectCache = new RedirectCache 
+                        {
+                            OriginalUrl = mapping.res.OriginalUrl,
+                            IsActive = mapping.res.IsActive,
+                            ExpiresAt = mapping.res.ExpiresAt,
+                            Id = mapping.res.Id
+                        };
+                        var redirectJson = System.Text.Json.JsonSerializer.Serialize(redirectCache);
+                        await _redis.StringSetAsync($"redirect:{mapping.res.ShortCode}", redirectJson, TimeSpan.FromHours(6));
+                        
+                        // 2. Full entity cache (lower frequency, 1-hour TTL)
                         var entityJson = System.Text.Json.JsonSerializer.Serialize(mapping.res);
-                        await _redis.StringSetAsync($"url:id:{mapping.res.Id}", entityJson, TimeSpan.FromDays(1));
-                        await _redis.StringSetAsync($"url:short:{mapping.res.ShortCode}", entityJson, TimeSpan.FromDays(1));
+                        await _redis.StringSetAsync($"entity:id:{mapping.res.Id}", entityJson, TimeSpan.FromHours(1));
+                        await _redis.StringSetAsync($"entity:short:{mapping.res.ShortCode}", entityJson, TimeSpan.FromHours(1));
                     }
                     await _unitOfWork.CommitTransactionAsync();
                 }
@@ -115,47 +128,49 @@ namespace Application.Services
             }
         }
 
-        public async Task<Error?> DeleteUrlAsync(int id)
+        public async Task<Result<bool>> DeleteUrlAsync(int id)
         {
             if (id <= 0)
             {
                 _logger.LogError("Invalid Id value: {Id}. It must be greater than zero.", id);
-                return new Error("Id must be greater than zero.", ErrorCode.BAD_REQUEST);
+                return new Failure<bool>(new Error("Id must be greater than zero.", ErrorCode.BAD_REQUEST));
             }
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
                 var urlMapping = await _urlMappingRepository.GetByIdAsync(id);
-                if (urlMapping is Failure<UrlMapping> urlMappingFailure) {
-                    return new Error(urlMappingFailure.error.message, urlMappingFailure.error.code);
+                if (urlMapping is Failure<UrlMapping?> urlMappingFailure) {
+                    return new Failure<bool>(new Error(urlMappingFailure.error.message, urlMappingFailure.error.code));
                 }
-                var url = (urlMapping as Success<UrlMapping>)!.res;
+                var url = (urlMapping as Success<UrlMapping?>)!.res;
                 if (url == null)
                 {
                     _logger.LogWarning("UrlMapping with Id {Id} not found.", id);
-                    return new Error($"UrlMapping with Id {id} not found.", ErrorCode.NOT_FOUND);
+                    return new Failure<bool>(new Error($"UrlMapping with Id {id} not found.", ErrorCode.NOT_FOUND));
                 }
                 // Delete the URL mapping from the database
                 await _urlMappingRepository.DeleteAsync(id);
                 await _unitOfWork.SaveChangesAsync();
                 if (_redis != null)
                 {
-                    await _redis.KeyDeleteAsync($"url:short:{url.ShortCode}");//remove from Redis only if then the delete operation is successful in the database
-                    await _redis.KeyDeleteAsync($"url:id:{id}");// remove the cache entry for the URL by Id
+                    // Clear both redirect cache and entity cache
+                    await _redis.KeyDeleteAsync($"redirect:{url.ShortCode}");
+                    await _redis.KeyDeleteAsync($"entity:id:{id}");
+                    await _redis.KeyDeleteAsync($"entity:short:{url.ShortCode}");
                 }
                 await _unitOfWork.CommitTransactionAsync();
-                return null;
+                return new Success<bool>(true);
             }
             catch (DbUpdateException dbEx)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(dbEx, "Failed to delete URL with Id: {Id}.", id);
-                return new Error(dbEx.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(dbEx.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting transaction for deletion.");
-                return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
 
@@ -203,30 +218,43 @@ namespace Application.Services
 
             try
             {
-                // Try Redis cache first (if available)
+                // Try entity cache first (for detailed operations)
                 if (_redis != null)
                 {
-                    var cacheKey = $"url:id:{Id}";
-                    var cached = await _redis.StringGetAsync(cacheKey);
-                    if (cached.HasValue)
+                    var entityCacheKey = $"entity:id:{Id}";
+                    var cached = await _redis.StringGetAsync(entityCacheKey);
+                    if (cached.HasValue && !string.IsNullOrEmpty(cached))
                     {
-                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached.ToString());
                         return new Success<UrlMapping?>(cachedEntity);
                     }
                 }
                
                 // If not found in cache, get from database
                 var url = await _urlMappingRepository.GetByIdAsync(Id);
-                if (url is Failure<UrlMapping> urlFailure) {
+                if (url is Failure<UrlMapping?> urlFailure) {
                     return new Failure<UrlMapping?>(new Error(urlFailure.error.message, urlFailure.error.code));
                 }
-                var entity = (url as Success<UrlMapping>)?.res;
+                var entity = (url as Success<UrlMapping?>)?.res;
 
                 // Cache if Redis available and entity found
                 if (entity != null && _redis != null)
                 {
-                    var cacheKey = $"url:id:{Id}";
-                    await _redis.StringSetAsync(cacheKey, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
+                    // Use hybrid caching: both entity and redirect caches
+                    var entityJson = System.Text.Json.JsonSerializer.Serialize(entity);
+                    await _redis.StringSetAsync($"entity:id:{Id}", entityJson, TimeSpan.FromHours(1));
+                    await _redis.StringSetAsync($"entity:short:{entity.ShortCode}", entityJson, TimeSpan.FromHours(1));
+                    
+                    // Also populate redirect cache
+                    var redirectCache = new RedirectCache 
+                    {
+                        OriginalUrl = entity.OriginalUrl,
+                        IsActive = entity.IsActive,
+                        ExpiresAt = entity.ExpiresAt,
+                        Id = entity.Id
+                    };
+                    var redirectJson = System.Text.Json.JsonSerializer.Serialize(redirectCache);
+                    await _redis.StringSetAsync($"redirect:{entity.ShortCode}", redirectJson, TimeSpan.FromHours(6));
                 }
 
                 return new Success<UrlMapping?>(entity);
@@ -248,30 +276,43 @@ namespace Application.Services
 
             try
             {
-                // Try Redis cache first (if available)
+                // Try entity cache first (for detailed operations)
                 if (_redis != null)
                 {
-                    var cacheKey = $"url:short:{shortCode}";
-                    var cached = await _redis.StringGetAsync(cacheKey);
-                    if (cached.HasValue)
+                    var entityCacheKey = $"entity:short:{shortCode}";
+                    var cached = await _redis.StringGetAsync(entityCacheKey);
+                    if (cached.HasValue && !string.IsNullOrEmpty(cached))
                     {
-                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
+                        var cachedEntity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached.ToString());
                         return new Success<UrlMapping?>(cachedEntity);
                     }
                 }
 
                 // Get from database
                 var url = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
-                if (url is Failure<UrlMapping> urlFailure) {
+                if (url is Failure<UrlMapping?> urlFailure) {
                     return new Failure<UrlMapping?>(new Error(urlFailure.error.message, urlFailure.error.code));
                 }
-                var entity = (url as Success<UrlMapping>)?.res;
+                var entity = (url as Success<UrlMapping?>)?.res;
 
-                // Cache if Redis available and entity found
+                // Cache if Redis available and entity found using hybrid strategy
                 if (entity != null && _redis != null)
                 {
-                    var cacheKey2 = $"url:short:{shortCode}";
-                    await _redis.StringSetAsync(cacheKey2, System.Text.Json.JsonSerializer.Serialize(entity), TimeSpan.FromDays(1));
+                    // Store full entity cache (1-hour TTL)
+                    var entityJson = System.Text.Json.JsonSerializer.Serialize(entity);
+                    await _redis.StringSetAsync($"entity:short:{shortCode}", entityJson, TimeSpan.FromHours(1));
+                    await _redis.StringSetAsync($"entity:id:{entity.Id}", entityJson, TimeSpan.FromHours(1));
+                    
+                    // Also populate redirect cache (6-hour TTL)
+                    var redirectCache = new RedirectCache 
+                    {
+                        OriginalUrl = entity.OriginalUrl,
+                        IsActive = entity.IsActive,
+                        ExpiresAt = entity.ExpiresAt,
+                        Id = entity.Id
+                    };
+                    var redirectJson = System.Text.Json.JsonSerializer.Serialize(redirectCache);
+                    await _redis.StringSetAsync($"redirect:{shortCode}", redirectJson, TimeSpan.FromHours(6));
                 }
 
                 return new Success<UrlMapping?>(entity);
@@ -313,38 +354,65 @@ namespace Application.Services
                 _logger.LogError("Short code cannot be null or empty.");
                 return new Failure<string>(new Error("Invalid short code", ErrorCode.BAD_REQUEST));
             }
-            var cacheKey = $"url:short:{shortCode}";
+            // Try lightweight redirect cache first (primary cache for redirects)
+            var redirectCacheKey = $"redirect:{shortCode}";
             if (_redis != null)
             {
-                var cached = await _redis.StringGetAsync(cacheKey);
-                if (cached.HasValue)
+                var redirectCached = await _redis.StringGetAsync(redirectCacheKey);
+                if (redirectCached.HasValue && !string.IsNullOrEmpty(redirectCached))
                 {
-                    // Deserialize and return only the OriginalUrl
-                    var entity = System.Text.Json.JsonSerializer.Deserialize<UrlMapping>(cached);
-                    if (entity != null && entity.IsActive)
+                    var redirectCache = System.Text.Json.JsonSerializer.Deserialize<RedirectCache>(redirectCached.ToString());
+                    if (redirectCache != null && redirectCache.IsActive && 
+                        (!redirectCache.ExpiresAt.HasValue || redirectCache.ExpiresAt > DateTime.UtcNow))
                     {
-                        return new Success<string>(entity.OriginalUrl);
+                        // Cache hit! Update click count and return URL
+                        await _unitOfWork.BeginTransactionAsync();
+                        try
+                        {
+                            await _urlMappingRepository.IncrementClickCountAsync(redirectCache.Id);
+                            await _unitOfWork.CommitTransactionAsync();
+                            return new Success<string>(redirectCache.OriginalUrl);
+                        }
+                        catch (Exception ex)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            _logger.LogError(ex, "Error incrementing click count for cached redirect");
+                            // Continue to return the URL even if click count update fails
+                            return new Success<string>(redirectCache.OriginalUrl);
+                        }
                     }
                 }
             }
 
-            // If not found in cache, get from database
+            // Cache miss - get from database
             var urlMapping = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
-            if (urlMapping is Failure<UrlMapping> urlMappingFailure) {
+            if (urlMapping is Failure<UrlMapping?> urlMappingFailure) {
                 return new Failure<string>(new Error(urlMappingFailure.error.message, urlMappingFailure.error.code));
             }
-            var url = (urlMapping as Success<UrlMapping>)!.res;
+            var url = (urlMapping as Success<UrlMapping?>)!.res;
             if (url == null || !url.IsActive)
             {
                 _logger.LogWarning("Invalid or inactive short code: {ShortCode}", shortCode);
                 return new Failure<string>(new Error("URL not found", ErrorCode.NOT_FOUND));
             }
 
-            // Store the full entity in cache for next time (TTL 1 day)
+            // Cache the result using hybrid strategy
             if (_redis != null)
             {
+                // 1. Store lightweight redirect cache (6-hour TTL)
+                var redirectCache = new RedirectCache 
+                {
+                    OriginalUrl = url.OriginalUrl,
+                    IsActive = url.IsActive,
+                    ExpiresAt = url.ExpiresAt,
+                    Id = url.Id
+                };
+                var redirectJson = System.Text.Json.JsonSerializer.Serialize(redirectCache);
+                await _redis.StringSetAsync(redirectCacheKey, redirectJson, TimeSpan.FromHours(6));
+                
+                // 2. Store full entity cache (1-hour TTL) for detailed operations
                 var entityJson = System.Text.Json.JsonSerializer.Serialize(url);
-                await _redis.StringSetAsync(cacheKey, entityJson, TimeSpan.FromDays(1));
+                await _redis.StringSetAsync($"entity:short:{shortCode}", entityJson, TimeSpan.FromHours(1));
             }
 
             await _unitOfWork.BeginTransactionAsync();
@@ -451,15 +519,29 @@ namespace Application.Services
 
                 if (_redis != null)
                 {
+                    // Update hybrid caches
                     var entityJson = System.Text.Json.JsonSerializer.Serialize(existingMapping);
-                    // Update cache by id and by short code
-                    await _redis.StringSetAsync($"url:id:{existingMapping.Id}", entityJson, TimeSpan.FromDays(1));
-                    await _redis.StringSetAsync($"url:short:{existingMapping.ShortCode}", entityJson, TimeSpan.FromDays(1));
+                    
+                    // Update entity caches (1-hour TTL)
+                    await _redis.StringSetAsync($"entity:id:{existingMapping.Id}", entityJson, TimeSpan.FromHours(1));
+                    await _redis.StringSetAsync($"entity:short:{existingMapping.ShortCode}", entityJson, TimeSpan.FromHours(1));
+                    
+                    // Update redirect cache (6-hour TTL)
+                    var redirectCache = new RedirectCache 
+                    {
+                        OriginalUrl = existingMapping.OriginalUrl,
+                        IsActive = existingMapping.IsActive,
+                        ExpiresAt = existingMapping.ExpiresAt,
+                        Id = existingMapping.Id
+                    };
+                    var redirectJson = System.Text.Json.JsonSerializer.Serialize(redirectCache);
+                    await _redis.StringSetAsync($"redirect:{existingMapping.ShortCode}", redirectJson, TimeSpan.FromHours(6));
 
-                    // If short code changed, remove old short code cache
+                    // If short code changed, remove old caches
                     if (!string.IsNullOrWhiteSpace(customShortCode) && customShortCode != oldShortCode)
                     {
-                        await _redis.KeyDeleteAsync($"url:short:{oldShortCode}");
+                        await _redis.KeyDeleteAsync($"entity:short:{oldShortCode}");
+                        await _redis.KeyDeleteAsync($"redirect:{oldShortCode}");
                     }
                 }
 
@@ -490,29 +572,25 @@ namespace Application.Services
                 return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
-        public async Task<Error?> DeactivateExpiredUrlsAsync()
+        public async Task<Result<bool>> DeactivateExpiredUrlsAsync()
         {
             try
             {
-                // Get all URLs that are active but expired
-                var expiredUrls = await _urlMappingRepository.GetExpiredUrlsAsync();
-                if (expiredUrls is Failure<IEnumerable<UrlMapping>> expiredUrlsFailure) {
-                    return new Error(expiredUrlsFailure.error.message, expiredUrlsFailure.error.code);
+                // Use bulk operation for optimal performance - single database operation
+                var bulkUpdateResult = await _urlMappingRepository.DeactivateExpiredUrlsBulkAsync();
+                if (bulkUpdateResult is Failure<int> bulkUpdateFailure) {
+                    return new Failure<bool>(new Error(bulkUpdateFailure.error.message, bulkUpdateFailure.error.code));
                 }
-                var urls = (expiredUrls as Success<IEnumerable<UrlMapping>>)!.res;
-                foreach (var url in urls)
-                {
-                    url.IsActive = false;
-                    await _urlMappingRepository.UpdateAsync(url);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-                return null;
+                
+                var updatedCount = (bulkUpdateResult as Success<int>)!.res;
+                _logger.LogInformation("Successfully deactivated {Count} expired URLs using bulk operation", updatedCount);
+                
+                return new Success<bool>(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deactivating expired URLs");
-                return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
+                return new Failure<bool>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
     }

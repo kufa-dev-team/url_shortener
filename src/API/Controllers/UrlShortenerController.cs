@@ -64,26 +64,26 @@ namespace API.Controllers
         }
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteUrlMapping(int Id)
+        public async Task<IActionResult> DeleteUrlMapping(int id)
         {
-            if (Id <= 0)
+            if (id <= 0)
             {
                 return BadRequest("The Id must be larger that Zero ");
             }
 
-            var urlMappingResult = await _urlMappingService.GetByIdAsync(Id);
+            var urlMappingResult = await _urlMappingService.GetByIdAsync(id);
             if (urlMappingResult is Failure<UrlMapping?> urlMappingFailure) {
                 return StatusCode((int)urlMappingFailure.error.code, urlMappingFailure.error.message);
             }
             var urlMapping = (urlMappingResult as Success<UrlMapping?>)?.res;
             if (urlMapping == null)
             {
-                return NotFound($"No URL mapping found for Id: {Id}");
+                return NotFound($"No URL mapping found for Id: {id}");
             }
 
-            var deleteResult = await _urlMappingService.DeleteUrlAsync(Id);
-            if (deleteResult != null) {
-                return StatusCode((int)deleteResult.code, deleteResult.message);
+            var deleteResult = await _urlMappingService.DeleteUrlAsync(id);
+            if (deleteResult is Failure<bool> deleteFailure) {
+                return StatusCode((int)deleteFailure.error.code, deleteFailure.error.message);
             }
             return NoContent();
         }
@@ -175,9 +175,9 @@ namespace API.Controllers
         [HttpGet("MostClicked/{limit}")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetMostClickedUrl(int limit)
         {
-            if (limit <= 0 || limit > 10000000)
+            if (limit <= 0 || limit > 1000)
             {
-                return BadRequest("Limit must be between 1 and 10000000");
+                return BadRequest("Limit must be between 1 and 1000");
             }
             var popularUrlsResult = await _urlMappingService.GetMostClickedUrlsAsync(limit);
             if (popularUrlsResult is Failure<IEnumerable<UrlMapping>> popularUrlsFailure) {
@@ -251,8 +251,8 @@ namespace API.Controllers
         public async Task<IActionResult> DeactivateExpired()
         {
             var deactivateExpiredResult = await _urlMappingService.DeactivateExpiredUrlsAsync();
-            if (deactivateExpiredResult != null) {
-                return StatusCode((int)deactivateExpiredResult.code, deactivateExpiredResult.message);
+            if (deactivateExpiredResult is Failure<bool> deactivateFailure) {
+                return StatusCode((int)deactivateFailure.error.code, deactivateFailure.error.message);
             }
             return NoContent();
         }
