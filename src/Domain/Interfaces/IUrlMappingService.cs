@@ -13,7 +13,8 @@ public interface IUrlMappingService
     Task<Result<IEnumerable<UrlMapping>>> GetActiveUrlsAsync();
     Task<Result<IEnumerable<UrlMapping>>> GetAllUrlsAsync();
     Task<Result<string>> RedirectToOriginalUrlAsync(string shortCode);
-    Task<Error?> DeleteUrlAsync(int id);
+    Task<Result<bool>> DeleteUrlAsync(int id);
     Task<Result<UrlMapping>> UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null);
-    Task<Error?> DeactivateExpiredUrlsAsync();
+    Task<Result<bool>> DeactivateExpiredUrlsAsync();
+    Task<bool> RemoveAsync(string shortCode);
 }

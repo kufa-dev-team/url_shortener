@@ -84,7 +84,7 @@ namespace UrlShortener.Api.Tests
             var existingUrl = new UrlMapping { Id = urlId, ShortCode = "EAGA2025" };
 
             _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
-            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync((Error?)null);
+            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync(new Success<bool>(true));
 
             // Act
             var result = await _controller.DeleteUrlMapping(urlId);
@@ -294,7 +294,7 @@ namespace UrlShortener.Api.Tests
 
 
         [Fact]
-        public async Task DeactivateExpiredUrlsAsync_ShouldSetIsActiveFalse_ForExpiredUrls()
+        public async Task DeactivateExpiredUrlsAsync_ShouldUseBulkOperation_ForOptimalPerformance()
         {
             var mockRepo = new Mock<IUrlMappingRepository>();
             var mockUnitOfWork = new Mock<IUnitOfWork>();
@@ -312,21 +312,22 @@ namespace UrlShortener.Api.Tests
             );
 
             //Arrange
-            var expiredUrls = new List<UrlMapping>
-            {
-                new UrlMapping { Id = 1, IsActive = true, ExpiresAt = DateTime.UtcNow.AddDays(-1) },
-                new UrlMapping { Id = 2, IsActive = true, ExpiresAt = DateTime.UtcNow.AddHours(-2) }
-            };
-            mockRepo.Setup(r => r.GetExpiredUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(expiredUrls));
-            mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(1);
-            //Act
-            await service.DeactivateExpiredUrlsAsync();
-            // Assert
-            Assert.All(expiredUrls, u => Assert.False(u.IsActive));
-            mockRepo.Verify(r => r.UpdateAsync(It.IsAny<UrlMapping>()), Times.Exactly(expiredUrls.Count));
-            mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            int expectedDeactivatedCount = 3;
+            mockRepo.Setup(r => r.DeactivateExpiredUrlsBulkAsync())
+                    .ReturnsAsync(new Success<int>(expectedDeactivatedCount));
 
+            //Act
+            var result = await service.DeactivateExpiredUrlsAsync();
+
+            // Assert
+            Assert.IsType<Success<bool>>(result);
+            var successResult = result as Success<bool>;
+            Assert.True(successResult!.res);
+            
+            // Verify bulk operation was called once instead of individual updates
+            mockRepo.Verify(r => r.DeactivateExpiredUrlsBulkAsync(), Times.Once);
+            mockRepo.Verify(r => r.UpdateAsync(It.IsAny<UrlMapping>()), Times.Never);
+            mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
 
         }
     }
