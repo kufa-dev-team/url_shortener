@@ -175,9 +175,9 @@ namespace API.Controllers
         [HttpGet("MostClicked/{limit}")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetMostClickedUrl(int limit)
         {
-            if (limit <= 0 || limit > 10000000)
+            if (limit <= 0 || limit > 1000)
             {
-                return BadRequest("Limit must be between 1 and 10000000");
+                return BadRequest("Limit must be between 1 and 1000");
             }
             var popularUrlsResult = await _urlMappingService.GetMostClickedUrlsAsync(limit);
             if (popularUrlsResult is Failure<IEnumerable<UrlMapping>> popularUrlsFailure) {
