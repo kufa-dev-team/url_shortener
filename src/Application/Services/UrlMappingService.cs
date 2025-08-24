@@ -59,7 +59,8 @@ namespace Application.Services
                         var shortCodeResult = await _shortUrlGeneratorService.GenerateShortUrlAsync(_shortCodeLength);
                         shortCode = shortCodeResult;
                         var urlExistsResult = await _urlMappingRepository.UrlExistsAsync(shortCode);
-                        if (urlExistsResult is Failure<bool> urlExistsFailure) {
+                        if (urlExistsResult is Failure<bool> urlExistsFailure)
+                        {
                             return new Failure<UrlMapping>(new Error(urlExistsFailure.error.message, urlExistsFailure.error.code));
                         }
                         isUnique = !(urlExistsResult as Success<bool>)!.res;
@@ -75,7 +76,8 @@ namespace Application.Services
                         return new Failure<UrlMapping>(new Error("Custom short code must be {Length} characters long.", ErrorCode.BAD_REQUEST));
                     }
                     var urlExistsResult = await _urlMappingRepository.UrlExistsAsync(customShortCode);
-                    if (urlExistsResult is Failure<bool> urlExistsFailure) {
+                    if (urlExistsResult is Failure<bool> urlExistsFailure)
+                    {
                         return new Failure<UrlMapping>(new Error(urlExistsFailure.error.message, urlExistsFailure.error.code));
                     }
                     if (urlExistsResult is Success<bool> urlExistsSuccess && urlExistsSuccess.res)
@@ -93,7 +95,8 @@ namespace Application.Services
                 }
 
                 var createdUrlMapping = await _urlMappingRepository.AddAsync(UrlMapping);
-                if (createdUrlMapping is Success<UrlMapping> mapping) {
+                if (createdUrlMapping is Success<UrlMapping> mapping)
+                {
                     await _unitOfWork.SaveChangesAsync();
 
                     // Cache the full entity in Redis by id and by short code
@@ -126,7 +129,8 @@ namespace Application.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
                 var urlMapping = await _urlMappingRepository.GetByIdAsync(id);
-                if (urlMapping is Failure<UrlMapping> urlMappingFailure) {
+                if (urlMapping is Failure<UrlMapping> urlMappingFailure)
+                {
                     return new Error(urlMappingFailure.error.message, urlMappingFailure.error.code);
                 }
                 var url = (urlMapping as Success<UrlMapping>)!.res;
@@ -164,7 +168,8 @@ namespace Application.Services
             try
             {
                 var activeUrls = await _urlMappingRepository.GetActiveAsync();
-                if (activeUrls is Failure<IEnumerable<UrlMapping>> activeUrlsFailure) {
+                if (activeUrls is Failure<IEnumerable<UrlMapping>> activeUrlsFailure)
+                {
                     return new Failure<IEnumerable<UrlMapping>>(new Error(activeUrlsFailure.error.message, activeUrlsFailure.error.code));
                 }
                 return new Success<IEnumerable<UrlMapping>>((activeUrls as Success<IEnumerable<UrlMapping>>)!.res);
@@ -181,7 +186,8 @@ namespace Application.Services
             try
             {
                 var allUrls = await _urlMappingRepository.GetAllAsync();
-                if (allUrls is Failure<IEnumerable<UrlMapping>> allUrlsFailure) {
+                if (allUrls is Failure<IEnumerable<UrlMapping>> allUrlsFailure)
+                {
                     return new Failure<IEnumerable<UrlMapping>>(new Error(allUrlsFailure.error.message, allUrlsFailure.error.code));
                 }
                 return new Success<IEnumerable<UrlMapping>>((allUrls as Success<IEnumerable<UrlMapping>>)!.res);
@@ -214,10 +220,11 @@ namespace Application.Services
                         return new Success<UrlMapping?>(cachedEntity);
                     }
                 }
-               
+
                 // If not found in cache, get from database
                 var url = await _urlMappingRepository.GetByIdAsync(Id);
-                if (url is Failure<UrlMapping> urlFailure) {
+                if (url is Failure<UrlMapping> urlFailure)
+                {
                     return new Failure<UrlMapping?>(new Error(urlFailure.error.message, urlFailure.error.code));
                 }
                 var entity = (url as Success<UrlMapping>)?.res;
@@ -262,7 +269,8 @@ namespace Application.Services
 
                 // Get from database
                 var url = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
-                if (url is Failure<UrlMapping> urlFailure) {
+                if (url is Failure<UrlMapping> urlFailure)
+                {
                     return new Failure<UrlMapping?>(new Error(urlFailure.error.message, urlFailure.error.code));
                 }
                 var entity = (url as Success<UrlMapping>)?.res;
@@ -294,7 +302,8 @@ namespace Application.Services
             try
             {
                 var mostClickedUrls = await _urlMappingRepository.GetMostClickedAsync(limit);
-                if (mostClickedUrls is Failure<IEnumerable<UrlMapping>> mostClickedUrlsFailure) {
+                if (mostClickedUrls is Failure<IEnumerable<UrlMapping>> mostClickedUrlsFailure)
+                {
                     return new Failure<IEnumerable<UrlMapping>>(new Error(mostClickedUrlsFailure.error.message, mostClickedUrlsFailure.error.code));
                 }
                 return new Success<IEnumerable<UrlMapping>>((mostClickedUrls as Success<IEnumerable<UrlMapping>>)!.res);
@@ -330,7 +339,8 @@ namespace Application.Services
 
             // If not found in cache, get from database
             var urlMapping = await _urlMappingRepository.GetByShortCodeAsync(shortCode);
-            if (urlMapping is Failure<UrlMapping> urlMappingFailure) {
+            if (urlMapping is Failure<UrlMapping> urlMappingFailure)
+            {
                 return new Failure<string>(new Error(urlMappingFailure.error.message, urlMappingFailure.error.code));
             }
             var url = (urlMapping as Success<UrlMapping>)!.res;
@@ -352,7 +362,8 @@ namespace Application.Services
             {
                 // Atomic counter update
                 var error = await _urlMappingRepository.IncrementClickCountAsync(url.Id);
-                if (error != null) {
+                if (error != null)
+                {
                     return new Failure<string>(error);
                 }
                 await _unitOfWork.CommitTransactionAsync();
@@ -373,13 +384,14 @@ namespace Application.Services
                 _logger.LogError("Attempted to update a null UrlMapping.");
                 return new Failure<UrlMapping>(new Error("UrlMapping cannot be null.", ErrorCode.BAD_REQUEST));
             }
-            
+
             var existingMappingResult = await _urlMappingRepository.GetByIdAsync(urlMapping.Id);
-            if (existingMappingResult is Failure<UrlMapping> existingMappingFailure) {
+            if (existingMappingResult is Failure<UrlMapping> existingMappingFailure)
+            {
                 return new Failure<UrlMapping>(new Error(existingMappingFailure.error.message, existingMappingFailure.error.code));
             }
             var existingMapping = (existingMappingResult as Success<UrlMapping>)!.res;
-            
+
             string oldShortCode = existingMapping.ShortCode;
             if (!string.IsNullOrWhiteSpace(customShortCode))
             {
@@ -389,7 +401,8 @@ namespace Application.Services
                     return new Failure<UrlMapping>(new Error($"Custom short code must be {_shortCodeLength} characters long.", ErrorCode.BAD_REQUEST));
                 }
                 var urlExistsResult = await _urlMappingRepository.UrlExistsAsync(customShortCode);
-                if (urlExistsResult is Failure<bool> urlExistsFailure) {
+                if (urlExistsResult is Failure<bool> urlExistsFailure)
+                {
                     return new Failure<UrlMapping>(new Error(urlExistsFailure.error.message, urlExistsFailure.error.code));
                 }
                 if (urlExistsResult is Success<bool> urlExistsSuccess && urlExistsSuccess.res && customShortCode != existingMapping.ShortCode)
@@ -496,7 +509,8 @@ namespace Application.Services
             {
                 // Get all URLs that are active but expired
                 var expiredUrls = await _urlMappingRepository.GetExpiredUrlsAsync();
-                if (expiredUrls is Failure<IEnumerable<UrlMapping>> expiredUrlsFailure) {
+                if (expiredUrls is Failure<IEnumerable<UrlMapping>> expiredUrlsFailure)
+                {
                     return new Error(expiredUrlsFailure.error.message, expiredUrlsFailure.error.code);
                 }
                 var urls = (expiredUrls as Success<IEnumerable<UrlMapping>>)!.res;
@@ -515,6 +529,20 @@ namespace Application.Services
                 return new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR);
             }
         }
+        
+        public async Task<bool> RemoveAsync(string shortCode)
+        {
+
+            var key = $"url:short:{shortCode}";
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            bool deleted = await _redis.KeyDeleteAsync(key);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+
+            //if (!deleted)
+            // throw new KeyNotFoundException($"ShortCode '{shortCode}' not found in cache.");
+            return deleted;
+        }
+
     }
 }
     

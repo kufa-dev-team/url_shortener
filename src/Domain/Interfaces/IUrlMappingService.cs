@@ -16,4 +16,5 @@ public interface IUrlMappingService
     Task<Error?> DeleteUrlAsync(int id);
     Task<Result<UrlMapping>> UpdateUrlAsync(UrlMapping urlMapping, string? customShortCode = null);
     Task<Error?> DeactivateExpiredUrlsAsync();
+     Task<bool> RemoveAsync(string shortCode);
 }

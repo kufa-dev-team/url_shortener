@@ -225,6 +225,55 @@ if (shortenedUrl != null)
 return shortenedUrl;
 ```
 
+## Redis Cache Invalidation
+
+# -Eviction / Expiry Policy
+Purpose: Ensure cached URL mappings do not persist indefinitely, freeing memory and keeping cache fresh.
+
+`TTL (Time-To-Live)`: 24 hours for all short code entries.
+
+Behavior:
+Each cached short code is automatically deleted by Redis after 24 hours.
+
+- Optional: TTL can be refreshed on access (sliding expiration), if implemented.
+
+- Rationale: Prevent stale or unused URLs from occupying Redis memory indefinitely.
+
+# -Admin Endpoint – Purge Cache by Short Code
+
+- Endpoint:
+DELETE /admin/cache/{shortCode}
+
+- Function: 
+Remove a specific short code from Redis cache.
+
+- Responses:
+HTTP Code	Description
+`204 No Content`:	Short code was successfully removed from cache.
+`404 Not Found` :	The short code does not exist in Redis.
+
+# -Implementation 
+- Service Layer Implementation:
+```bash
+public async Task<bool> RemoveAsync(string shortCode)
+{
+  var key = $"url:https://{shortCode}";
+  return await _redis.KeyDeleteAsync(key);
+  //return true if the key found(deleted), and false if the key not found
+}
+```
+- API Controller Implementation
+```bash
+[HttpDelete("/admin/catch/{shortCode}")]
+public async Task<IActionResult> PurgeByCode(string shortCode)
+{
+  var deleted = await _urlMappingService.RemoveAsync(shortCode);
+  if (!deleted)
+    return NotFound($"ShortCode '{shortCode}' not found in cache.");
+  return NoContent(); // 204
+}
+```
+
 ## 🎯 Key Learning Areas
 
 ### Performance Optimization

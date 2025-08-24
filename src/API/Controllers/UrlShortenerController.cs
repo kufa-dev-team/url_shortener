@@ -27,7 +27,7 @@ namespace API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<CreateUrlMappingResponse>> CreateShortUrl([FromBody] CreateUrlMappingRequest request)
         {
-            
+
             var urlMapping = new UrlMapping
             {
                 OriginalUrl = request.OriginalUrl,
@@ -36,10 +36,12 @@ namespace API.Controllers
                 Description = request.Description,
             };
             var CreatedUrl = await _urlMappingService.CreateUrlMappingAsync(urlMapping, request.CustomShortCode);
-            if (CreatedUrl is Failure<UrlMapping> failure) {
+            if (CreatedUrl is Failure<UrlMapping> failure)
+            {
                 return StatusCode((int)failure.error.code, failure.error.message);
             }
-            if (CreatedUrl is Success<UrlMapping> url) {
+            if (CreatedUrl is Success<UrlMapping> url)
+            {
                 return CreatedAtAction
                 (
                     nameof(GetUrlById),
@@ -64,6 +66,8 @@ namespace API.Controllers
         }
 
         [HttpDelete]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUrlMapping(int Id)
         {
             if (Id <= 0)
@@ -72,7 +76,8 @@ namespace API.Controllers
             }
 
             var urlMappingResult = await _urlMappingService.GetByIdAsync(Id);
-            if (urlMappingResult is Failure<UrlMapping?> urlMappingFailure) {
+            if (urlMappingResult is Failure<UrlMapping?> urlMappingFailure)
+            {
                 return StatusCode((int)urlMappingFailure.error.code, urlMappingFailure.error.message);
             }
             var urlMapping = (urlMappingResult as Success<UrlMapping?>)?.res;
@@ -82,7 +87,8 @@ namespace API.Controllers
             }
 
             var deleteResult = await _urlMappingService.DeleteUrlAsync(Id);
-            if (deleteResult != null) {
+            if (deleteResult != null)
+            {
                 return StatusCode((int)deleteResult.code, deleteResult.message);
             }
             return NoContent();
@@ -91,11 +97,13 @@ namespace API.Controllers
         public async Task<ActionResult<UrlMappingResponse>> UpdateUrl([FromBody] UpdateUrlMappingRequest request)
         {
             var existingUrl = await _urlMappingService.GetByIdAsync(request.Id);
-            if (existingUrl is Failure<UrlMapping> existingUrlFailure) {
+            if (existingUrl is Failure<UrlMapping> existingUrlFailure)
+            {
                 return StatusCode((int)existingUrlFailure.error.code, existingUrlFailure.error.message);
             }
             var url = (existingUrl as Success<UrlMapping>)?.res;
-            if (url == null) {
+            if (url == null)
+            {
                 return NotFound($"URL with ID {request.Id} not found.");
             }
             url.Title = request.Title ?? url.Title;
@@ -106,11 +114,13 @@ namespace API.Controllers
             url.UpdatedAt = DateTime.UtcNow;
 
             var updateUrlResult = await _urlMappingService.UpdateUrlAsync(url, request.CustomShortCode);
-            if (updateUrlResult is Failure<UrlMapping> updateUrlFailure) {
+            if (updateUrlResult is Failure<UrlMapping> updateUrlFailure)
+            {
                 return StatusCode((int)updateUrlFailure.error.code, updateUrlFailure.error.message);
             }
             var updatedUrl = (updateUrlResult as Success<UrlMapping>)?.res;
-            if (updatedUrl == null) {
+            if (updatedUrl == null)
+            {
                 return StatusCode(500, "Internal server error");
             }
             return Ok(new UrlMappingResponse
@@ -131,12 +141,14 @@ namespace API.Controllers
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetAllUrls()
         {
             var urlMappingsResult = await _urlMappingService.GetAllUrlsAsync();
-            if (urlMappingsResult is Failure<IEnumerable<UrlMapping>> urlMappingsFailure) {
+            if (urlMappingsResult is Failure<IEnumerable<UrlMapping>> urlMappingsFailure)
+            {
                 return StatusCode((int)urlMappingsFailure.error.code, urlMappingsFailure.error.message);
             }
             var urlMappings = (urlMappingsResult as Success<IEnumerable<UrlMapping>>)!.res;
             return Ok(urlMappings.Select(um => new UrlMappingResponse
             {
+                Id = um.Id,
                 OriginalUrl = um.OriginalUrl,
                 ShortCode = um.ShortCode,
                 ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
@@ -152,11 +164,13 @@ namespace API.Controllers
         public async Task<ActionResult<UrlMappingResponse>> GetUrlById(int id)
         {
             var existingUrlResult = await _urlMappingService.GetByIdAsync(id);
-            if (existingUrlResult is Failure<UrlMapping> existingUrlFailure) {
+            if (existingUrlResult is Failure<UrlMapping> existingUrlFailure)
+            {
                 return StatusCode((int)existingUrlFailure.error.code, existingUrlFailure.error.message);
             }
             var url = (existingUrlResult as Success<UrlMapping>)?.res;
-            if (url == null) {
+            if (url == null)
+            {
                 return NotFound($"URL with ID {id} not found.");
             }
             return Ok(new UrlMappingResponse
@@ -180,7 +194,8 @@ namespace API.Controllers
                 return BadRequest("Limit must be between 1 and 10000000");
             }
             var popularUrlsResult = await _urlMappingService.GetMostClickedUrlsAsync(limit);
-            if (popularUrlsResult is Failure<IEnumerable<UrlMapping>> popularUrlsFailure) {
+            if (popularUrlsResult is Failure<IEnumerable<UrlMapping>> popularUrlsFailure)
+            {
                 return StatusCode((int)popularUrlsFailure.error.code, popularUrlsFailure.error.message);
             }
             var popularUrls = (popularUrlsResult as Success<IEnumerable<UrlMapping>>)!.res;
@@ -202,24 +217,25 @@ namespace API.Controllers
         [HttpGet("/allActiveUrls")]
         public async Task<ActionResult<IEnumerable<UrlMappingResponse>>> GetActiveUrls()
         {
-                var activeUrlsResult = await _urlMappingService.GetActiveUrlsAsync();
-                if (activeUrlsResult is Failure<IEnumerable<UrlMapping>> activeUrlsFailure) {
-                    return StatusCode((int)activeUrlsFailure.error.code, activeUrlsFailure.error.message);
-                }
-                var activeUrls = (activeUrlsResult as Success<IEnumerable<UrlMapping>>)!.res;
-                return Ok(activeUrls.Select(um => new UrlMappingResponse
-                {
-                    Id = um.Id,
-                    OriginalUrl = um.OriginalUrl,
-                    ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
-                    ShortCode = um.ShortCode,
-                    Title = um.Title,
-                    Description = um.Description,
-                    ExpiresAt = um.ExpiresAt,
-                    ClickCount = um.ClickCount,
-                    IsActive = um.IsActive,
-                    CreatedAt = um.CreatedAt
-                }));
+            var activeUrlsResult = await _urlMappingService.GetActiveUrlsAsync();
+            if (activeUrlsResult is Failure<IEnumerable<UrlMapping>> activeUrlsFailure)
+            {
+                return StatusCode((int)activeUrlsFailure.error.code, activeUrlsFailure.error.message);
+            }
+            var activeUrls = (activeUrlsResult as Success<IEnumerable<UrlMapping>>)!.res;
+            return Ok(activeUrls.Select(um => new UrlMappingResponse
+            {
+                Id = um.Id,
+                OriginalUrl = um.OriginalUrl,
+                ShortUrl = $"{Request.Scheme}://{Request.Host}/{um.ShortCode}",
+                ShortCode = um.ShortCode,
+                Title = um.Title,
+                Description = um.Description,
+                ExpiresAt = um.ExpiresAt,
+                ClickCount = um.ClickCount,
+                IsActive = um.IsActive,
+                CreatedAt = um.CreatedAt
+            }));
         }
         // Redirect endpoint: GET /{shortCode}
         // This endpoint returns a 302 redirect to the original URL if found, or 404 if not found.
@@ -231,7 +247,8 @@ namespace API.Controllers
             _logger.LogTrace("Redirect requested for short code: {ShortCode}", shortCode);
 
             var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-            if (originalUrlResult is Failure<string> originalUrlFailure) {
+            if (originalUrlResult is Failure<string> originalUrlFailure)
+            {
                 _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
                 return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
             }
@@ -251,10 +268,25 @@ namespace API.Controllers
         public async Task<IActionResult> DeactivateExpired()
         {
             var deactivateExpiredResult = await _urlMappingService.DeactivateExpiredUrlsAsync();
-            if (deactivateExpiredResult != null) {
+            if (deactivateExpiredResult != null)
+            {
                 return StatusCode((int)deactivateExpiredResult.code, deactivateExpiredResult.message);
             }
             return NoContent();
+        }
+        
+        [HttpDelete("admin/cache/{shortCode}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PurgeByCode(string shortCode)
+        {
+            var deleted = await _urlMappingService.RemoveAsync(shortCode);
+            if (!deleted)
+                return NotFound($"ShortCode '{shortCode}' not found in cache.");
+
+            return NoContent(); // 204
+
+
         }
 
         
