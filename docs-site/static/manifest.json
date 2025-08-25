@@ -1,0 +1,17 @@
+{
+  "name": "URL Shortener Docs",
+  "short_name": "Shortener Docs",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#0b3a6a",
+  "theme_color": "#0b3a6a",
+  "icons": [
+    {
+      "src": "/img/favicon.ico",
+      "sizes": "32x32 48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
+
+

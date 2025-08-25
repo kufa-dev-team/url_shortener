@@ -1,0 +1,111 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #2e7dd7;
+  --ifm-color-primary-dark: #246fc3;
+  --ifm-color-primary-darker: #1f64b1;
+  --ifm-color-primary-darkest: #1a5494;
+  --ifm-color-primary-light: #3a8ae0;
+  --ifm-color-primary-lighter: #4b96e6;
+  --ifm-color-primary-lightest: #6aa8ec;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #6aa8ec;
+  --ifm-color-primary-dark: #4b96e6;
+  --ifm-color-primary-darker: #3a8ae0;
+  --ifm-color-primary-darkest: #246fc3;
+  --ifm-color-primary-light: #8dbdf2;
+  --ifm-color-primary-lighter: #a4cbf6;
+  --ifm-color-primary-lightest: #c3dcfa;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Reduce max content width for better readability */
+.container.container--fluid {
+  max-width: 1200px;
+}
+
+/* Make code blocks wrap when necessary */
+.theme-code-block pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Respect users with motion sensitivities */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Improve link visibility and focus */
+a {
+  text-underline-offset: 3px;
+}
+a:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+/* Sidebar tweaks */
+.menu__list-item > .menu__link {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+.menu__link--active {
+  font-weight: 600;
+}
+
+/* Headings rhythm */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Cards (for future homepage sections) */
+.card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+/* Code blocks readability */
+code, pre code {
+  font-variant-ligatures: none;
+}
+.theme-code-block {
+  border-radius: 10px;
+}
+
+/* Improve focus visibility globally */
+:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 3px;
+}
+
+/* Compact table of contents for better scanning */
+.table-of-contents__link:hover {
+  text-decoration: underline;
+}
