@@ -1,34 +1,34 @@
-services: 
+services:
   postgres:
     image: postgres:16-alpine
     platform: linux/arm64
-    container_name: urlshortener-postgres
+    container_name: urlshortener-postgres-staging
     environment:
       POSTGRES_DB: urlshortener
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_staging:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d urlshortener"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d urlshortener"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
 
   redis:
     image: redis:7-alpine
     platform: linux/arm64
-    container_name: urlshortener-redis
+    container_name: urlshortener-redis-staging
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0 --ignore-warnings ARM64-COW-BUG
+      - redis_data_staging:/data
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0 --ignore-warnings ARM64-COW-BUG
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -36,51 +36,51 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
     platform: linux/arm64
-    container_name: urlshortener-redis-ui
+    container_name: urlshortener-redis-ui-staging
     environment:
       REDIS_HOSTS: local:redis:6379
-      HTTP_USER: admin
-      HTTP_PASSWORD: admin
+      HTTP_USER: ${REDIS_COMMANDER_USER:-admin}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD:-admin}
     ports:
       - "8081:8081"
     depends_on:
       - redis
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
 
   pgadmin:
     image: dpage/pgadmin4:latest
     platform: linux/arm64
-    container_name: urlshortener-pgadmin
+    container_name: urlshortener-pgadmin-staging
     ports:
       - "8082:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data_staging:/var/lib/pgadmin
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
 
   # New Relic Infrastructure Agent
   newrelic-infra:
     image: newrelic/infrastructure:latest
     platform: linux/arm64
-    container_name: urlshortener-newrelic-dev
+    container_name: urlshortener-newrelic-staging
     env_file:
       - ../.env.staging
     environment:
-      - NRIA_DISPLAY_NAME=URLShortener-Development
-      - NRIA_VERBOSE=1
+      - NRIA_DISPLAY_NAME=URLShortener-Staging
+      - NRIA_VERBOSE=0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sys:/host/sys:ro
@@ -88,55 +88,47 @@ services:
     privileged: true
     pid: host
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
   # Prometheus (metrics storage)
   prometheus:
     image: prom/prometheus:latest
     platform: linux/arm64
-    container_name: urlshortener-prometheus-dev
+    container_name: urlshortener-prometheus-staging
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
+      - ./monitoring/prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_staging:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
+      - '--storage.tsdb.retention.time=400h'
       - '--web.enable-lifecycle'
-      - '--log.level=debug'
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
   # Grafana (dashboards)
   grafana:
     image: grafana/grafana:latest
     platform: linux/arm64
-    container_name: urlshortener-grafana-dev
+    container_name: urlshortener-grafana-staging
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_LOG_LEVEL=debug
-      - GF_PLUGINS_PREINSTALL=grafana-clock-panel,grafana-simple-json-datasource
-      - GF_ALERTING_ENABLED=true
-      - GF_ALERTING_ALLOW_EXTERNAL_URLS=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./monitoring/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
-      - ./monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
-      
-      
+      - grafana_data_staging:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     depends_on:
       - prometheus
     restart: unless-stopped
@@ -145,39 +137,38 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     platform: linux/arm64
-    container_name: urlshortener-postgres-exporter-dev
+    container_name: urlshortener-postgres-exporter-staging
     environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/urlshortener?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/urlshortener?sslmode=disable"
     ports:
       - "9187:9187"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
   # Redis Exporter
   redis-exporter:
     image: oliver006/redis_exporter
     platform: linux/arm64
-    container_name: urlshortener-redis-exporter-dev
+    container_name: urlshortener-redis-exporter-staging
     environment:
       REDIS_ADDR: "redis:6379"
-      # No password for dev environment
     ports:
       - "9121:9121"
     depends_on:
       - redis
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
   # cAdvisor (Container monitoring)
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     platform: linux/arm64
-    container_name: urlshortener-cadvisor-dev
+    container_name: urlshortener-cadvisor-staging
     ports:
       - "8080:8080"
     volumes:
@@ -190,14 +181,14 @@ services:
     devices:
       - /dev/kmsg
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
   # Node Exporter (System monitoring)
   node-exporter:
     image: prom/node-exporter:latest
     platform: linux/arm64
-    container_name: urlshortener-node-exporter-dev
+    container_name: urlshortener-node-exporter-staging
     ports:
       - "9100:9100"
     volumes:
@@ -210,21 +201,21 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
-      - urlshortener-network
+      - urlshortener-network-staging
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_data_staging:
     driver: local
-  redis_data:
+  redis_data_staging:
     driver: local
-  pgadmin_data:
+  pgadmin_data_staging:
     driver: local
-  prometheus_data:
+  prometheus_data_staging:
     driver: local
-  grafana_data:
+  grafana_data_staging:
     driver: local
 
 networks:
-  urlshortener-network:
+  urlshortener-network-staging:
     driver: bridge
