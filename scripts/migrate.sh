@@ -41,7 +41,7 @@ else
 fi
 
 echo "🏗️  Building migration Docker image..."
-docker build -f Dockerfile.migration -t migration-runner .
+docker build -f docker/Dockerfile.migration -t migration-runner .
 
 echo "🚀 Running EF Core migrations..."
 docker run --rm --network urlshortener-network migration-runner \
