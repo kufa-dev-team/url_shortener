@@ -17,15 +17,15 @@ fi
 if ! docker ps --filter "name=urlshortener-postgres" --filter "status=running" | grep -q urlshortener-postgres; then
     echo "❌ Error: PostgreSQL container 'urlshortener-postgres' is not running."
     echo "   Please start your Docker Compose services first:"
-    echo "   docker-compose -f docker/docker-compose.yml up -d"
+    echo "   docker-compose -f docker/docker-compose.dev.yml up -d"
     exit 1
 fi
 
 # Check if network exists
-if ! docker network ls | grep -q urlshortener_network; then
-    echo "❌ Error: Docker network 'urlshortener_network' not found."
+if ! docker network ls | grep -q urlshortener-network; then
+    echo "❌ Error: Docker network 'urlshortener-network' not found."
     echo "   Please start your Docker Compose services first:"
-    echo "   docker-compose -f docker/docker-compose.yml up -d"
+    echo "   docker-compose -f docker/docker-compose.dev.yml up -d"
     exit 1
 fi
 
@@ -44,7 +44,7 @@ echo "🏗️  Building migration Docker image..."
 docker build -f Dockerfile.migration -t migration-runner .
 
 echo "🚀 Running EF Core migrations..."
-docker run --rm --network urlshortener_network migration-runner \
+docker run --rm --network urlshortener-network migration-runner \
     dotnet ef database update --project src/Infrastructure --startup-project src/API \
     --connection "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};"
 
