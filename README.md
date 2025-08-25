@@ -426,3 +426,211 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 ---
 
 This URL shortener demonstrates modern C# development practices, advanced caching strategies, and clean architecture principles. Explore the codebase to learn about high-performance web API development with .NET.
+
+
+
+
+
+# Staging Deployment Guide
+
+This document provides a clear guide for deploying the URL Shortener service to a local staging environment using Docker Compose. 
+
+## Overview
+The staging environment runs inside Docker containers and includes:
+
+- API: ASP.NET Core 9.0 application
+- PostgreSQL (database)
+- Redis (caching layer)
+
+## Prerequisites
+- Docker Engine
+- Docker Compose
+- .NET 9.0 SDK (optional, for running migrations locally)
+
+## Environment Variables & Secrets Manifest
+Secrets for the staging environment are managed via a .env.staging file, which must not be committed to version control.
+
+# Create the Environment File
+- Create a new file named .env.staging in the docker/ directory.
+- Copy the template below and paste it into the file.
+
+```
+ASPNETCORE_ENVIRONMENT=Staging
+
+# ----- PostgreSQL Database -----
+POSTGRES_DB=urlshortener_staging
+POSTGRES_USER=appuser
+POSTGRES_PASSWORD=your_secure_password_123 # Change this to a strong password
+
+# ----- Redis -----
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# -- pgAdmin --
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin # Change this to a strong password
+```
+
+## Configuration Files
+The application reads these values into different configuration layers:
+
+# -Docker Services (Postgres, pgAdmin): 
+Read POSTGRES_* and PGADMIN_* variables directly from the .env.staging file.
+
+# -ASP.NET Core App: 
+The connection strings are injected via appsettings.Staging.json which uses placeholders that are overridden by the Docker Compose file, which in turn reads from .env.staging.
+
+- ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+
+- ConnectionStrings__Redis: redis:6379
+
+
+## Deployment Guide (Staging)
+
+Follow these steps to deploy the application to staging:
+
+# Navigate to the compose directory
+  cd docker
+
+# Start the staging services
+
+- Linux/macOS => docker compose -f docker-compose.staging.yml up -d --build
+- Windows (PowerShell) => docker-compose -f docker-compose.staging.yml up -d --build
+
+The -d flag runs containers in the background (detached mode). The --build flag ensures the API image is rebuilt with any recent code changes.
+
+# Verify services are running
+windows=>  docker-compose -f docker-compose.staging.yml ps
+linux =>   docker compose -f docker/docker-compose.staging.yml ps
+
+# View logs
+windows=>  docker-compose -f docker-compose.staging.yml logs -f
+linux =>   docker compose -f docker/docker-compose.staging.yml logs -f
+# Run database migrations (if required)
+  run ./scripts/migrate.sh
+
+# Access the API
+API → http://localhost:5135
+PostgreSQL → localhost:5432 (inside Docker network: postgres:5432)
+Redis → localhost:6379 (inside Docker network: redis:6379)
+
+## Resetting the Staging Environment
+If things break badly (wrong DB schema, bad volumes, etc.):
+
+Linux / macOS:
+docker compose -f docker/docker-compose.staging.yml down -v
+
+Windows (PowerShell):
+docker-compose -f docker-compose.staging.yml down -v
+
+This removes all containers and volumes so you start fre
+
+## Debugging 
+# -password authentication failed for user "postgres"
+
+- Error:
+`28P01: password authentication failed for user "postgres"`
+
+- Cause:
+The Postgres container may still have old credentials stored in its Docker volume.
+Solution:
+Remove the Postgres volume so it can be recreated with the correct password.
+
+- Linux / macOS
+docker volume rm compose_postgres_data
+docker volume rm docker_postgres_data
+docker volume rm urlshortener_postgres_data
+
+
+- Windows (PowerShell)
+docker volume rm compose_postgres_data
+docker volume rm docker_postgres_data
+docker volume rm urlshortener_postgres_data
+
+
+- After removing, restart your services:
+docker compose -f docker/docker-compose.staging.yml up -d --build
+
+# -Orphan container warnings
+
+- Error:
+`found orphan containers ([urlshortener-redis-ui]) for this project`
+
+
+- Cause:
+Containers from old Compose projects are still running.
+
+- Solution:
+Remove old orphan containers.
+
+- Linux / macOS
+docker ps -a
+docker rm -f <container_id>
+
+
+- Windows (PowerShell)
+docker ps -a
+docker rm -f <container_id>
+
+
+Or let Docker handle it automatically:
+docker compose -f docker/docker-compose.staging.yml up -d --remove-orphans
+
+
+# -Database not updating after schema changes (migrations not applied)
+
+- Cause:
+EF Core migrations have not been applied to the Postgres database.
+
+- Solution:
+Run migrations inside the API container.
+
+- Linux / macOS
+docker exec -it <api_container_name> dotnet ef database update
+
+
+- Windows (PowerShell)
+docker exec -it <api_container_name> dotnet ef database update
+
+Replace <api_container_name> with the name shown in docker ps (e.g., docker-api-1).
+
+
+# -Wrong volume names
+
+- Problem:
+Docker Compose automatically prefixes volume names with the project name if not explicitly set.
+For example, postgres_data: becomes compose_postgres_data.
+
+- Solution:
+Define explicit names in your docker-compose.staging.yml:
+
+volumes:
+  postgres_data:
+    name: urlshortener_postgres_data
+  redis_data:
+    name: urlshortener_redis_data
+  pgadmin_data:
+    name: urlshortener_pgadmin_data
+
+
+- Then remove old ones before recreating:
+
+Linux / macOS
+docker volume rm compose_postgres_data
+docker volume rm compose_redis_data
+
+
+Windows (PowerShell)
+docker volume rm compose_postgres_data
+docker volume rm compose_redis_data
+
+
+⚡ Tip: Always check volumes and containers to see what is running and what may cause conflicts.
+
+- List volumes:
+docker volume ls
+
+- List containers:
+docker ps -a
+
+
