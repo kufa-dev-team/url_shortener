@@ -5,6 +5,12 @@ title: API Endpoints
 
 Base URL: `http://localhost:5135` (Development) | `http://localhost:5000` (Production)
 
+:::info Port Configuration
+- **Development (local run):** Uses port 5135 for HTTP and 7127 for HTTPS  
+- **Production (Docker):** Uses port 5000 (mapped from internal port 8080)
+- **Docker Development:** When running API in Docker, also uses port 5000
+:::
+
 ## URL Management Endpoints
 
 ### Create Short URL
@@ -61,9 +67,18 @@ Update an existing URL mapping.
 ### Delete URL
 **DELETE** `/UrlShortener?id={id}`
 
-Permanently delete a URL mapping.
+Permanently delete a URL mapping by ID.
 
-**Response:** `204 No Content` (Success) | `404 Not Found`
+**Parameters:**
+- `id` (query parameter): The numeric ID of the URL mapping to delete
+
+**Validation:**
+- ID must be greater than 0
+
+**Response:** 
+- `204 No Content` (Success) 
+- `400 Bad Request` (Invalid ID)
+- `404 Not Found` (URL mapping not found)
 
 ### Get All URLs
 **GET** `/UrlShortener/GetAll`
@@ -96,9 +111,21 @@ Retrieve a specific URL mapping by its ID.
 ### Get Most Popular URLs
 **GET** `/UrlShortener/MostClicked/{limit}`
 
-Get the most clicked URLs (limit: 1-1000).
+Get the most clicked URLs ordered by click count (descending).
+
+**Parameters:**
+- `limit` (path parameter): Number of results to return (1-1000)
+
+**Validation:**
+- Limit must be between 1 and 1000
 
 **Response:** Array of URL mappings ordered by click count (descending).
+
+**Example:**
+```bash
+# Get top 5 most popular URLs
+curl http://localhost:5135/UrlShortener/MostClicked/5
+```
 
 ### Get Active URLs
 **GET** `/allActiveUrls`
@@ -137,14 +164,46 @@ Remove a specific entry from all cache tiers (redirect + entity cache).
 ## Health & Monitoring
 
 ### Health Checks
-- **GET** `/health/live` → Liveness probe (basic availability)
+- **GET** `/health/live` → Liveness probe (basic application availability)
 - **GET** `/health/ready` → Readiness probe (database + cache connectivity) 
 - **GET** `/health` → Comprehensive health status with JSON details
+
+**Example Responses:**
+
+**Liveness (`/health/live`):**
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.0001010",
+  "entries": {}
+}
+```
+
+**Readiness (`/health/ready`):**
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.1408225",
+  "entries": {
+    "database": {
+      "status": "Healthy",
+      "tags": ["db", "postgresql"]
+    },
+    "redis-cache": {
+      "status": "Healthy", 
+      "tags": ["cache", "redis"]
+    }
+  }
+}
+```
 
 ### Metrics
 **GET** `/metrics`
 
 Prometheus metrics endpoint for monitoring and observability.
+
+**Format:** Plain text (Prometheus exposition format)  
+**Content-Type:** `text/plain; version=0.0.4; charset=utf-8`
 
 ## Examples
 

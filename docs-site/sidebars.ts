@@ -14,6 +14,7 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
  */
 const sidebars: SidebarsConfig = {
   mainSidebar: [
+    'intro',
     'overview',
     'getting-started',
     {
@@ -44,11 +45,19 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Monitoring',
+      items: [
+        'monitoring/observability',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Development',
       items: [
         'development/local-setup',
         'development/docker-compose',
         'development/migrations',
+        'development/error-handling',
       ],
     },
     'roadmap',
