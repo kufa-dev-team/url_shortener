@@ -35,10 +35,10 @@ public class UpdateUrlMappingRequestValidator : AbstractValidator<UpdateUrlMappi
             .WithMessage("Description cannot exceed 500 characters")
             .When(x => !string.IsNullOrEmpty(x.Description));
 
-        RuleFor(x => x.ExpiresAt)
-            .GreaterThan(DateTime.UtcNow)
-            .WithMessage("Expiration date must be in the future")
-            .When(x => x.ExpiresAt.HasValue);
+        // RuleFor(x => x.ExpiresAt)
+            // .GreaterThan(DateTime.UtcNow)
+            // .WithMessage("Expiration date must be in the future")
+            // .When(x => x.ExpiresAt.HasValue);
     }
 
     private static bool BeAValidUrl(string? url)

@@ -228,6 +228,5 @@ namespace Infrastructure.Repositories
                 return new Failure<int>(new Error(ex.Message, ErrorCode.INTERNAL_SERVER_ERROR));
             }
         }
-
     }
 }
