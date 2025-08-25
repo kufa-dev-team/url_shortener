@@ -1,0 +1,11 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: alerting
+      receivers:
+        - uid: bevuj4uwuby80c
+          type: slack
+          settings:
+            recipient: '#test'
+            url: https://hooks.slack.com/services/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
+          disableResolveMessage: false
