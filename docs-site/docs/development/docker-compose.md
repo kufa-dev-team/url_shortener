@@ -3,7 +3,7 @@ id: docker-compose
 title: Docker Compose Services
 ---
 
-Services from `compose/docker-compose.dev.yml`:
+Services from `docker/docker-compose.dev.yml`:
 
 - PostgreSQL (5432)
 - Redis (6379)
@@ -11,7 +11,7 @@ Services from `compose/docker-compose.dev.yml`:
 - Redis Commander (8081)
 
 ```bash
-cd compose
+cd docker
 cp .env.example .env
 
 docker-compose -f docker-compose.dev.yml up -d
