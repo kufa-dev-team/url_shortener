@@ -2,46 +2,87 @@
 sidebar_position: 1
 ---
 
-# Tutorial Intro
+# URL Shortener Documentation
 
-Let's discover **Docusaurus in less than 5 minutes**.
+Welcome to the **URL Shortener** project documentation! This is a comprehensive guide for a high-performance ASP.NET Core 9.0 URL shortening service.
 
-## Getting Started
+## 🎯 What You'll Learn
 
-Get started by **creating a new site**.
+This documentation covers everything from basic setup to advanced caching patterns and monitoring:
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+- **Complete API Reference** - All endpoints with examples
+- **Advanced Caching** - Hybrid dual-tier Redis caching system
+- **Clean Architecture** - Modern .NET development patterns  
+- **Monitoring & Observability** - Prometheus + Grafana setup
+- **Development Workflow** - Docker-based local development
 
-### What you'll need
+## 🚀 Quick Start
 
-- [Node.js](https://nodejs.org/en/download/) version 18.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+Get up and running in minutes:
 
-## Generate a new site
+1. **Clone the repository**
+2. **Start services**: `docker-compose -f docker/docker-compose.dev.yml up -d`
+3. **Apply migrations**: `./scripts/migrate.sh`
+4. **Run API**: `dotnet run --project src/API`
 
-Generate a new Docusaurus site using the **classic template**.
+Visit http://localhost:5135/swagger to explore the API!
 
-The classic template will automatically be added to your project after you run the command:
+## 📚 Documentation Structure
 
-```bash
-npm init docusaurus@latest my-website classic
-```
+### 🏗️ [Architecture](./architecture/clean-architecture.md)
+Learn about the Clean Architecture implementation, dependency injection, and project structure.
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
+### 📡 [API Reference](./api/endpoints.md)  
+Complete endpoint documentation with request/response examples and error handling.
 
-The command also installs all necessary dependencies you need to run Docusaurus.
+### 🚀 [Caching](./caching/patterns.md)
+Advanced hybrid caching strategies using Redis for optimal performance.
 
-## Start your site
+### 💾 [Data Model](./data-model/entities.md)
+Database entities, relationships, and Entity Framework Core implementation.
 
-Run the development server:
+### 👨‍💻 [Development](./development/local-setup.md)
+Local development setup, migrations, testing, and debugging.
 
-```bash
-cd my-website
-npm run start
-```
+### 📊 [Monitoring](./monitoring/observability.md)
+Prometheus metrics, Grafana dashboards, and health check configuration.
 
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
+## 🔧 Key Features
 
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
+### Performance Optimizations
+- **Hybrid Dual-Tier Caching** - 60-80% memory reduction
+- **Connection Pooling** - Optimized database connections
+- **Bulk Operations** - Efficient maintenance tasks
+- **Asynchronous Processing** - High-throughput request handling
 
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+### Modern Development Practices
+- **Result Pattern** - Functional error handling
+- **FluentValidation** - Robust input validation
+- **Structured Logging** - Comprehensive observability
+- **Health Checks** - Application and dependency monitoring
+
+### Enterprise Features
+- **Prometheus Integration** - Metrics collection and alerting
+- **Grafana Dashboards** - Visualization and monitoring
+- **Docker Compose** - Containerized development environment
+- **Database Migrations** - Automated schema management
+
+## 🎓 Perfect for Learning
+
+This project demonstrates:
+- **Modern C#** features (records, pattern matching, nullable reference types)
+- **Clean Architecture** principles and implementation
+- **Advanced Caching** patterns and strategies  
+- **Monitoring & Observability** best practices
+- **High-Performance** web API development
+
+## 💡 Need Help?
+
+- **Start Here**: [Local Setup Guide](./development/local-setup.md)
+- **API Basics**: [Endpoint Documentation](./api/endpoints.md)  
+- **Understanding the Code**: [Architecture Overview](./architecture/clean-architecture.md)
+- **Performance Deep Dive**: [Caching Patterns](./caching/patterns.md)
+
+---
+
+Ready to dive in? Check out the [**Overview**](./overview.md) for a comprehensive introduction to the project!

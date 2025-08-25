@@ -65,4 +65,5 @@ CACHING_GUIDE.md
 *.sln.DotSettings.user
 
 # Visual Studio Code settings
+.vscode/
 .vs/
