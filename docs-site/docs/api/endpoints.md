@@ -11,6 +11,13 @@ Base URL: `http://localhost:5135` (Development) | `http://localhost:5000` (Produ
 - **Docker Development:** When running API in Docker, also uses port 5000
 :::
 
+:::note Controller Routing
+Most endpoints use the `[controller]` route pattern, which means they are prefixed with `/UrlShortener`. 
+- Example: `POST /UrlShortener` for creating URLs
+- The redirect endpoint follows the same pattern: `GET /UrlShortener/{shortCode}`
+- Exception: Some endpoints like `/allActiveUrls` have custom routes
+:::
+
 ## URL Management Endpoints
 
 ### Create Short URL
@@ -35,7 +42,7 @@ Create a new shortened URL with optional metadata and custom short code.
   "id": 1,
   "shortCode": "my-link",
   "originalUrl": "https://www.example.com/very/long/url",
-  "shortUrl": "http://localhost:5135/my-link",
+  "shortUrl": "http://localhost:5135/UrlShortener/my-link",
   "title": "Example Website",
   "description": "Demo website",
   "expiresAt": "2024-12-31T23:59:59Z",
@@ -92,7 +99,7 @@ Retrieve all URL mappings.
     "id": 1,
     "shortCode": "abc123",
     "originalUrl": "https://example.com",
-    "shortUrl": "http://localhost:5135/abc123",
+    "shortUrl": "http://localhost:5135/UrlShortener/abc123",
     "title": "Example",
     "description": "Demo",
     "expiresAt": null,
@@ -135,7 +142,7 @@ Retrieve only active (non-expired, enabled) URL mappings.
 ## Redirect Endpoint
 
 ### Redirect to Original URL
-**GET** `/{shortCode}`
+**GET** `/UrlShortener/{shortCode}`
 
 Redirects to the original URL and increments click counter.
 
@@ -153,7 +160,7 @@ Bulk deactivate all expired URLs for maintenance.
 **Response:** `204 No Content`
 
 ### Purge Cache Entry
-**DELETE** `/admin/cache/{shortCode}`
+**DELETE** `/UrlShortener/admin/cache/{shortCode}`
 
 Remove a specific entry from all cache tiers (redirect + entity cache).
 
@@ -221,7 +228,7 @@ curl -X POST http://localhost:5135/UrlShortener \
 
 ### Use the Short URL
 ```bash
-curl -L http://localhost:5135/abc123
+curl -L http://localhost:5135/UrlShortener/abc123
 # Redirects to original URL and increments click count
 ```
 
@@ -232,5 +239,5 @@ curl http://localhost:5135/UrlShortener/MostClicked/10
 
 ### Admin Cache Purge
 ```bash
-curl -X DELETE http://localhost:5135/admin/cache/abc123
+curl -X DELETE http://localhost:5135/UrlShortener/admin/cache/abc123
 ```

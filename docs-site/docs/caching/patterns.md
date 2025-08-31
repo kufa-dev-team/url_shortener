@@ -152,7 +152,7 @@ url:short:abc12345 → Legacy format
 
 **Admin Cache Purge Endpoint:**
 ```bash
-DELETE /admin/cache/{shortCode}
+DELETE /UrlShortener/admin/cache/{shortCode}
 ```
 
 **Implementation:**

@@ -90,7 +90,7 @@ flowchart TB
 
 ### Development Tools
 - **Docker Compose** - Local development environment
-- **Supabase Studio** - Modern PostgreSQL management
+- **pgAdmin** - Modern PostgreSQL management
 - **Redis Commander** - Cache inspection and management
 - **Swagger/OpenAPI** - Interactive API documentation
 
@@ -138,7 +138,7 @@ POST /UrlShortener
 GET /UrlShortener/MostClicked/10
 
 # Admin cache management  
-DELETE /admin/cache/abc12345
+DELETE /UrlShortener/admin/cache/abc12345
 ```
 
 ### Administrative Features

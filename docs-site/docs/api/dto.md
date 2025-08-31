@@ -20,6 +20,7 @@ public class CreateUrlMappingRequest
 
     /// <summary>
     /// Custom short code (optional). Must be exactly 8 characters if provided.
+    /// Must match regex ^[a-zA-Z0-9_-]+$ (letters, numbers, hyphens, underscores only).
     /// If not provided, one will be generated automatically.
     /// </summary>
     public string? CustomShortCode { get; set; }
@@ -58,13 +59,13 @@ Used for updating existing URL mappings.
 ```csharp
 public class UpdateUrlMappingRequest
 {
-    public int Id { get; set; }                    // Required: ID of URL to update
-    public string? OriginalUrl { get; set; }       // Optional: New original URL
-    public string? CustomShortCode { get; set; }   // Optional: New short code
-    public string? Title { get; set; }             // Optional: New title
-    public string? Description { get; set; }       // Optional: New description
-    public DateTime? ExpiresAt { get; set; }       // Optional: New expiration
-    public bool IsActive { get; set; }             // Optional: Active status
+    public int Id { get; set; }                         // Required: ID of URL to update
+    public string? CustomShortCode { get; set; }        // Optional: New short code
+    public string? Title { get; set; }                  // Optional: New title
+    public string? Description { get; set; }            // Optional: New description
+    public required string? OriginalUrl { get; set; }   // Required: New original URL
+    public bool IsActive { get; set; } = true;          // Active status with default
+    public DateTime? ExpiresAt { get; set; }            // Optional: New expiration
 }
 ```
 
@@ -96,7 +97,7 @@ public class CreateUrlMappingResponse
   "id": 1,
   "shortCode": "abc12345",
   "originalUrl": "https://www.example.com/very/long/path",
-  "shortUrl": "http://localhost:5135/abc12345",
+  "shortUrl": "http://localhost:5135/UrlShortener/abc12345",
   "title": "Example Resource",
   "description": "This is an example resource",
   "expiresAt": "2024-12-31T23:59:59Z",
@@ -123,17 +124,17 @@ public class UrlMappingResponse
     public bool IsActive { get; set; }
     public int ClickCount { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 }
 ```
 
 ## Validation Rules
 
 ### URL Validation
-- **OriginalUrl**: Must be a valid HTTP/HTTPS URL
-- **CustomShortCode**: Exactly 8 characters, alphanumeric
-- **ExpiresAt**: Must be in the future if provided
-- **Title/Description**: Optional string fields
+- **OriginalUrl**: Must be a valid HTTP/HTTPS URL, cannot exceed 2048 characters
+- **CustomShortCode**: Exactly 8 characters, must match regex `^[a-zA-Z0-9_-]+$` (letters, numbers, hyphens, underscores only)
+- **ExpiresAt**: Must be in the future if provided (for create requests; update requests allow any date for testing)
+- **Title**: Optional, maximum 200 characters
+- **Description**: Optional, maximum 500 characters
 
 ### Error Responses
 All endpoints return consistent error responses:

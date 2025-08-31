@@ -61,8 +61,9 @@ docker-compose -f docker-compose.dev.yml ps
 **Services Started:**
 - **PostgreSQL** (port 5432) - Main database
 - **Redis** (port 6379) - Caching layer  
-- **Supabase Studio** (port 8080) - Database management UI
+- **pgAdmin** (port 8082) - Database management UI
 - **Redis Commander** (port 8081) - Redis management UI
+- **cAdvisor** (port 8080) - Container monitoring
 
 ### 4. Apply Database Migrations
 ```bash
@@ -87,7 +88,7 @@ dotnet run --project src/API
 
 # Application will start at:
 # HTTP: http://localhost:5135
-# HTTPS: https://localhost:7218
+# HTTPS: https://localhost:7127
 ```
 
 ### 6. Verify Installation
@@ -101,7 +102,7 @@ curl -X POST http://localhost:5135/UrlShortener \
   -d '{"originalUrl": "https://github.com/microsoft/dotnet"}'
 
 # Test redirect (use the shortCode from response)
-curl -L http://localhost:5135/abc12345
+curl -L http://localhost:5135/UrlShortener/abc12345
 ```
 
 ## Development Services Access
@@ -110,7 +111,8 @@ curl -L http://localhost:5135/abc12345
 |---------|-----|-------------|---------|
 | **API** | http://localhost:5135 | - | Main application |
 | **Swagger UI** | http://localhost:5135/swagger | - | API documentation |
-| **Supabase Studio** | http://localhost:8080 | Direct DB connection | PostgreSQL management |
+| **pgAdmin** | http://localhost:8082 | admin@admin.com/admin | PostgreSQL management |
+| **cAdvisor** | http://localhost:8080 | - | Container monitoring |
 | **Redis Commander** | http://localhost:8081 | admin/admin | Redis cache management |
 | **Health Checks** | http://localhost:5135/health | - | System status |
 | **Metrics** | http://localhost:5135/metrics | - | Prometheus metrics |
@@ -348,7 +350,7 @@ dotnet-counters monitor --process-id <PID>
 Once your local environment is running:
 
 1. **Explore the API** - Visit http://localhost:5135/swagger
-2. **Check the database** - Use Supabase Studio at http://localhost:8080
+2. **Check the database** - Use pgAdmin at http://localhost:8082
 3. **Monitor cache** - Use Redis Commander at http://localhost:8081
 4. **Review the code** - Start with `src/API/Controllers/UrlShortenerController.cs`
 5. **Run tests** - Execute `dotnet test` to run the test suite

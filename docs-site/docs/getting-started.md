@@ -128,7 +128,7 @@ Expected response:
   "id": 1,
   "shortCode": "abc12345",
   "originalUrl": "https://github.com/microsoft/dotnet",
-  "shortUrl": "http://localhost:5135/abc12345",
+  "shortUrl": "http://localhost:5135/UrlShortener/abc12345",
   "title": ".NET Repository",
   "description": "Official Microsoft .NET repository",
   "isActive": true,
@@ -140,7 +140,7 @@ Expected response:
 ### 3. Test the Redirect
 ```bash
 # This will redirect to the original URL
-curl -L http://localhost:5135/abc12345
+curl -L http://localhost:5135/UrlShortener/abc12345
 ```
 
 ### 4. Check Analytics

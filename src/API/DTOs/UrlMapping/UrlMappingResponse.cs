@@ -23,7 +23,7 @@ public class UrlMappingResponse
     /// <summary>
     /// The complete shortened URL
     /// </summary>
-    /// <example>https://short.ly/abc123</example>
+    /// <example>http://localhost:5135/abc123</example>
     public string ShortUrl { get; set; } = string.Empty;
 
     /// <summary>
@@ -80,7 +80,7 @@ public class UrlMappingStatsResponse
     /// <summary>
     /// The complete shortened URL
     /// </summary>
-    /// <example>https://short.ly/abc123</example>
+    /// <example>http://localhost:5135/abc123</example>
     public string ShortUrl { get; set; } = string.Empty;
 
     /// <summary>

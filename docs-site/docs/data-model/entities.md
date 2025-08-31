@@ -13,8 +13,8 @@ All entities inherit from `BaseEntity` which provides common auditing fields:
 public abstract class BaseEntity
 {
     public int Id { get; set; }                              // Primary key
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  // Creation timestamp
-    public DateTime? UpdatedAt { get; set; }                 // Last modification timestamp
+    public DateTime CreatedAt { get; set; }  // Creation timestamp
+    public DateTime UpdatedAt { get; set; }                 // Last modification timestamp
 }
 ```
 
@@ -48,7 +48,7 @@ public class UrlMapping : BaseEntity
 | `Title` | `string?` | Optional human-readable title | `null` | ❌ |
 | `Description` | `string?` | Optional description | `null` | ❌ |
 | `CreatedAt` | `DateTime` | When the record was created | `DateTime.UtcNow` | ✅ |
-| `UpdatedAt` | `DateTime?` | When the record was last updated | `null` | ❌ |
+| `UpdatedAt` | `DateTime` | When the record was last updated | `DateTime.UtcNow` | ✅ |
 
 ### Business Rules
 
