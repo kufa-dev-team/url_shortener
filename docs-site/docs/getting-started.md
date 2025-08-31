@@ -325,6 +325,31 @@ docker-compose -f docker-compose.dev.yml down --volumes
 docker-compose -f docker-compose.dev.yml up -d --build
 ```
 
+### Documentation Site Issues
+If the Docusaurus documentation site is having issues:
+
+```bash
+# Navigate to docs-site directory
+cd docs-site
+
+# Quick fix script (clears cache and rebuilds)
+chmod +x fix-docs.sh && ./fix-docs.sh     # Linux/macOS
+# or
+fix-docs.bat                               # Windows
+
+# Manual steps if script doesn't work:
+rm -rf .docusaurus build node_modules/.cache
+npm install
+npm run build
+npm run start
+```
+
+**Common Docusaurus Issues:**
+- **MDX compilation errors**: Check for unescaped angle brackets `<` and `>`
+- **Build failures**: Clear `.docusaurus` and `build` directories 
+- **Module resolution**: Delete `node_modules` and reinstall
+- **Port conflicts**: Change port in package.json or kill process using port 3000
+
 ## Next Steps
 
 Now that you have the URL Shortener running:
