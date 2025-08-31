@@ -64,6 +64,8 @@ CACHING_GUIDE.md
 # IDE settings files that should be ignored
 *.sln.DotSettings.user
 
-# Visual Studio Code settings
-.vscode/
+# Visual Studio-specific files
 .vs/
+
+# Visual Studio Code-specific files
+.vscode

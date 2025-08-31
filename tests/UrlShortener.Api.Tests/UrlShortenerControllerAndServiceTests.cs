@@ -303,8 +303,10 @@ namespace UrlShortener.Api.Tests
             var mockRedis = new Mock<IConnectionMultiplexer>();
             mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(Mock.Of<IDatabase>());
 
+            // Setup UnitOfWork to return mocked repository
+            mockUnitOfWork.Setup(u => u.UrlMappings).Returns(mockRepo.Object);
+
             var service = new UrlMappingService(
-                mockRepo.Object,
                 mockUnitOfWork.Object,
                 mockLogger.Object,
                 mockShortUrlService.Object,

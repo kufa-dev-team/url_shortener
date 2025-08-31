@@ -47,6 +47,8 @@ builder.Services.AddHealthChecks()
     .AddRedis(redisConnectionString, name: "redis-cache", tags: new[] { "cache", "redis" })
     .ForwardToPrometheus();
 
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -96,3 +98,5 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 });
 
 app.Run();
+
+public partial class Program { }
