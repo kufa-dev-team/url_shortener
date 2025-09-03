@@ -11,25 +11,75 @@ import styles from './index.module.css';
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
+    <header className={clsx('hero', styles.heroBanner)}>
+      {/* Floating background elements */}
+      <div className={styles.heroFloatingElement}></div>
+      <div className={styles.heroFloatingElement}></div>
+      <div className={styles.heroFloatingElement}></div>
+      
       <div className="container">
-        <Heading as="h1" className="hero__title">
+        <Heading as="h1" className={clsx("hero__title", "animate-fade-in-up")}>
           {siteConfig.title}
         </Heading>
-        <p className="hero__subtitle">
+        <p className={clsx("hero__subtitle", "animate-fade-in-up")} style={{animationDelay: '0.2s'}}>
           {siteConfig.tagline}
         </p>
-        <div className={styles.buttons}>
+        <div className={clsx(styles.buttons, "animate-fade-in-up")} style={{animationDelay: '0.4s'}}>
           <Link
             className="button button--secondary button--lg"
             to="/docs/overview">
-            Read the Overview →
+            📖 Read the Overview
           </Link>
           <Link
-            className="button button--outline button--lg margin-left--sm"
+            className="button button--outline button--lg"
             to="/docs/getting-started">
-            Get Started
+            🚀 Get Started
           </Link>
+        </div>
+        
+        {/* Stats badges */}
+        <div className={clsx("margin-top--xl", "animate-fade-in")} style={{animationDelay: '0.6s'}}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '2rem',
+            flexWrap: 'wrap',
+            marginTop: '3rem'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              padding: '1rem 1.5rem',
+              borderRadius: 'var(--modern-radius-lg)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.25rem'}}>⚡</div>
+              <div style={{fontSize: '0.9rem', opacity: 0.8}}>Lightning Fast</div>
+            </div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              padding: '1rem 1.5rem',
+              borderRadius: 'var(--modern-radius-lg)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.25rem'}}>🔧</div>
+              <div style={{fontSize: '0.9rem', opacity: 0.8}}>Clean Architecture</div>
+            </div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              padding: '1rem 1.5rem',
+              borderRadius: 'var(--modern-radius-lg)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.25rem'}}>🚀</div>
+              <div style={{fontSize: '0.9rem', opacity: 0.8}}>Production Ready</div>
+            </div>
+          </div>
         </div>
       </div>
     </header>

@@ -15,10 +15,9 @@ if (process.env.DOCS_ENABLE_LOCAL_SEARCH === 'true') {
       {
         hashed: true,
         indexDocs: true,
-        indexBlog: true,
         language: ['en'],
         highlightSearchTermsOnTargetPage: true,
-        searchContextByPaths: ['docs', 'blog'],
+        searchContextByPaths: ['docs'],
       },
     ]);
   } catch (e) {
@@ -60,7 +59,7 @@ try {
 const config: Config = {
   title: 'URL Shortener',
   tagline: 'High-performance ASP.NET Core URL shortener with advanced caching',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/logo.webp',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -98,18 +97,6 @@ const config: Config = {
           editUrl:
             'https://github.com/kufa-dev-team/url_shortener/edit/develop/docs-site/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          editUrl:
-            'https://github.com/kufa-dev-team/url_shortener/edit/develop/docs-site/',
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -131,7 +118,11 @@ const config: Config = {
       title: 'URL Shortener',
       logo: {
         alt: 'URL Shortener Logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.webp',
+        width: 40,
+        height: 40,
+      },
+        height: 32,
       },
       items: [
         {
@@ -140,7 +131,6 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/kufa-dev-team/url_shortener',
           label: 'GitHub',
@@ -192,10 +182,6 @@ const config: Config = {
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
             {
               label: 'GitHub',
               href: 'https://github.com/kufa-dev-team/url_shortener',

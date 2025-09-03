@@ -35,7 +35,7 @@ flowchart TD
 
 ### 1. Redirect Cache (High-Frequency Operations)
 **Purpose:** Optimized for URL redirection performance  
-**Key Pattern:** `redirect:{shortCode}`  
+**Key Pattern:** `redirect:{'{'}shortCode{'}'}`  
 **TTL:** 6 hours  
 **Data Structure:** Lightweight `RedirectCache` model  
 
@@ -50,15 +50,15 @@ public class RedirectCache
 ```
 
 **Use Cases:**
-- URL redirection (GET /{shortCode})
+- URL redirection (GET /UrlShortener/{'{'}shortCode{'}'})
 - High-frequency read operations
 - Performance-critical paths
 
 ### 2. Entity Cache (Full Operations)
 **Purpose:** Complete entity data for CRUD operations  
 **Key Patterns:** 
-- `entity:id:{id}` (by ID)
-- `entity:short:{shortCode}` (by short code)
+- `entity:id:{'{'}id{'}'}` (by ID)
+- `entity:short:{'{'}shortCode{'}'}` (by short code)
 
 **TTL:** 1 hour  
 **Data Structure:** Full `UrlMapping` entity  
@@ -89,7 +89,7 @@ sequenceDiagram
     participant EC as Entity Cache
     participant DB as Database
 
-    App->>RC: Get redirect:{shortCode}
+    App->>RC: Get redirect:shortCode
     alt Cache Hit
         RC-->>App: RedirectCache data
         App->>DB: Update click count only
@@ -112,9 +112,9 @@ sequenceDiagram
     participant DB as Database
 
     App->>DB: Update entity
-    App->>Cache: Update entity:{id}
-    App->>Cache: Update entity:short:{shortCode}
-    App->>Cache: Update redirect:{shortCode}
+    App->>Cache: Update entity:id
+    App->>Cache: Update entity:short:shortCode
+    App->>Cache: Update redirect:shortCode
     App-->>App: Confirm update
 ```
 
@@ -152,7 +152,7 @@ url:short:abc12345 → Legacy format
 
 **Admin Cache Purge Endpoint:**
 ```bash
-DELETE /UrlShortener/admin/cache/{shortCode}
+DELETE /UrlShortener/admin/cache/:shortCode
 ```
 
 **Implementation:**
@@ -164,9 +164,9 @@ public async Task<bool> RemoveAsync(string shortCode)
     // Enhanced cache invalidation for hybrid system
     var deleteTasks = new[]
     {
-        _redis.KeyDeleteAsync($"redirect:{shortCode}"),       // Redirect tier
-        _redis.KeyDeleteAsync($"entity:short:{shortCode}"),   // Entity tier
-        _redis.KeyDeleteAsync($"url:short:{shortCode}")       // Legacy compatibility
+        _redis.KeyDeleteAsync($"redirect:" + shortCode),       // Redirect tier
+        _redis.KeyDeleteAsync($"entity:short:" + shortCode),   // Entity tier
+        _redis.KeyDeleteAsync($"url:short:" + shortCode)       // Legacy compatibility
     };
     
     var results = await Task.WhenAll(deleteTasks);

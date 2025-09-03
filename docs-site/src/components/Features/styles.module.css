@@ -1,10 +1,187 @@
+/* Modern Features Section */
 .features {
-  padding: 2rem 0 3rem;
+  padding: 6rem 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(102, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
 }
-.card {
-  transition: transform .15s ease, box-shadow .2s ease;
+
+[data-theme='dark'] .features {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(102, 102, 241, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+
+.featuresHeader {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.featuresTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: var(--modern-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+.featuresSubtitle {
+  font-size: 1.2rem;
+  color: var(--modern-gray-600);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+[data-theme='dark'] .featuresSubtitle {
+  color: var(--modern-gray-400);
+}
+
+/* Features Grid */
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Feature Cards */
+.featureCard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--modern-gray-200);
+  border-radius: var(--modern-radius-2xl);
+  padding: 2rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-shadow: var(--modern-shadow-md);
+}
+
+[data-theme='dark'] .featureCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--modern-gray-700);
+  backdrop-filter: blur(30px);
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--modern-shadow-lg);
+  border-color: var(--feature-color, var(--modern-primary));
+}
+
+.featureCard:hover .featureGlow {
+  opacity: 0.6;
+  transform: scale(1.1);
+}
+
+/* Feature Glow Effect */
+.featureGlow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: radial-gradient(
+    circle,
+    var(--feature-color, var(--modern-primary)) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Feature Icon */
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: var(--modern-gradient-card);
+  border: 1px solid var(--modern-gray-200);
+  border-radius: var(--modern-radius-xl);
+  margin-bottom: 1.5rem;
+  color: var(--feature-color, var(--modern-primary));
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+[data-theme='dark'] .featureIcon {
+  border: 1px solid var(--modern-gray-700);
+}
+
+.featureCard:hover .featureIcon {
+  transform: scale(1.05);
+  box-shadow: var(--modern-shadow-md);
+}
+
+/* Feature Content */
+.featureContent {
+  position: relative;
+  z-index: 2;
+}
+
+.featureTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--ifm-color-content-primary);
+  line-height: 1.3;
+}
+
+.featureDescription {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--modern-gray-600);
+  margin-bottom: 1.5rem;
+}
+
+[data-theme='dark'] .featureDescription {
+  color: var(--modern-gray-400);
+}
+
+
+/* Mobile Responsiveness */
+@media (max-width: 576px) {
+  .features {
+    padding: 4rem 0;
+  }
+  
+  .featuresTitle {
+    font-size: 2rem;
+  }
+  
+  .featuresSubtitle {
+    font-size: 1.1rem;
+  }
+  
+  .featureCard {
+    padding: 1.5rem;
+  }
+  
+  .featureIcon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .featureTitle {
+    font-size: 1.3rem;
+  }
 }
