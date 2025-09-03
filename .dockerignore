@@ -34,7 +34,6 @@ LICENSE
 
 # Development files
 docker/docker-compose.dev.yml
-launchSettings.json
 
 # Temporary files
 **/*.tmp

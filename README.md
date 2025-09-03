@@ -1,6 +1,17 @@
-# URL Shortener
-
-A high-performance URL shortener service built with ASP.NET Core 9.0, featuring advanced caching strategies and modern C# development practices.
+<div align="center">
+  <img src="docs-site/static/img/repo_logo.webp" alt="URL Shortener Logo" width="200" height="200">
+  
+  # URL Shortener
+  
+  **A high-performance URL shortener service built with ASP.NET Core 9.0**
+  
+  *Featuring advanced caching strategies and modern C# development practices*
+  
+  [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+  [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+</div>
 
 ## 🎯 Overview
 
