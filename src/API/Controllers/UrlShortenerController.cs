@@ -1,9 +1,11 @@
 
 using API.DTOs.UrlMapping;
-using Microsoft.AspNetCore.Mvc;
+using Application.Services;
 using Domain.Entities;
 using Domain.Interfaces;
 using Domain.Result;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace API.Controllers
 {
@@ -13,13 +15,17 @@ namespace API.Controllers
     {
         private readonly ILogger<UrlShortenerController> _logger;
         private readonly IUrlMappingService _urlMappingService;
+        private readonly ISafeBrowsingService _safeBrowsingService;
 
         public UrlShortenerController(
             ILogger<UrlShortenerController> logger,
-            IUrlMappingService urlMappingService)
+            IUrlMappingService urlMappingService,
+            ISafeBrowsingService safeBrowsingService)
+            
         {
             _urlMappingService = urlMappingService;
             _logger = logger;
+            _safeBrowsingService = safeBrowsingService;
         }
 
         [HttpPost]
@@ -27,7 +33,11 @@ namespace API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<CreateUrlMappingResponse>> CreateShortUrl([FromBody] CreateUrlMappingRequest request)
         {
-
+            if (!await _safeBrowsingService.IsUrlSafeAsync(request.OriginalUrl))
+            {
+                _logger.LogWarning("Blocked malicious URL: {Url}", request.OriginalUrl);
+                return BadRequest("The provided URL is flagged as unsafe or malicious.");
+            }
             var urlMapping = new UrlMapping
             {
                 OriginalUrl = request.OriginalUrl,
@@ -35,6 +45,7 @@ namespace API.Controllers
                 Title = request.Title,
                 Description = request.Description,
             };
+            
             var CreatedUrl = await _urlMappingService.CreateUrlMappingAsync(urlMapping, request.CustomShortCode);
             if (CreatedUrl is Failure<UrlMapping> failure)
             {
@@ -239,7 +250,7 @@ namespace API.Controllers
         }
         // Redirect endpoint: GET /{shortCode}
         // This endpoint returns a 302 redirect to the original URL if found, or 404 if not found.
-        [HttpGet("{shortCode}")]
+        [HttpGet("/{shortCode}")]
         [ProducesResponseType(StatusCodes.Status302Found)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RedirectByShortCode(string shortCode)

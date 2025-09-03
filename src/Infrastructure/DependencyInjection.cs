@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUrlMappingRepository, UrlMappingRepository>();
         services.AddScoped<IShortUrlGeneratorService, ShortUrlGeneratorService>();
+        services.AddHttpClient<ISafeBrowsingService, SafeBrowsingService>();
 
 
         return services;
