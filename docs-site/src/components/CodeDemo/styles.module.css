@@ -1,0 +1,99 @@
+.codeDemo {
+  margin: 2rem 0;
+  border-radius: var(--modern-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--modern-shadow-lg);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--modern-gray-200);
+}
+
+[data-theme='dark'] .codeDemo {
+  border-color: var(--modern-gray-700);
+  background: rgba(15, 15, 35, 0.5);
+}
+
+.codeDemoHeader {
+  padding: 1.5rem;
+  background: linear-gradient(135deg, var(--modern-primary) 0%, var(--modern-secondary) 100%);
+  color: white;
+}
+
+.codeDemoTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.codeDemoDescription {
+  margin: 0.5rem 0 0;
+  opacity: 0.95;
+  line-height: 1.6;
+}
+
+.codeDemoContent {
+  position: relative;
+}
+
+.codeActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  z-index: 10;
+}
+
+.codeLanguage {
+  background: var(--modern-primary);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--modern-radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.copyButton {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: var(--ifm-color-content-primary);
+  border: 1px solid var(--modern-gray-300);
+  padding: 0.5rem 1rem;
+  border-radius: var(--modern-radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[data-theme='dark'] .copyButton {
+  border-color: var(--modern-gray-600);
+}
+
+.copyButton:hover {
+  background: var(--modern-primary);
+  color: white;
+  border-color: var(--modern-primary);
+  transform: translateY(-1px);
+}
+
+.copyButton.copied {
+  background: var(--modern-success);
+  color: white;
+  border-color: var(--modern-success);
+}
+
+/* Override default code block styles inside CodeDemo */
+.codeDemoContent pre {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}

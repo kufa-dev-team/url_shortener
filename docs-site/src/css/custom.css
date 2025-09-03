@@ -1,582 +1,158 @@
 /**
- * Modern Design System for URL Shortener Docs
- * Advanced color palette, spacing, and design tokens
+ * Clean, minimal custom styles for URL Shortener docs
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Modern Design Tokens */
+/* Root variables */
 :root {
-  /* Color Palette - Light Mode */
-  --modern-primary: #0066ff;
-  --modern-primary-hover: #0052cc;
-  --modern-primary-light: #4d94ff;
-  --modern-primary-lighter: #80b3ff;
-  --modern-primary-lightest: #e6f2ff;
+  --ifm-color-primary: #0066ff;
+  --ifm-color-primary-dark: #0052cc;
+  --ifm-color-primary-darker: #004ab8;
+  --ifm-color-primary-darkest: #003d99;
+  --ifm-color-primary-light: #3384ff;
+  --ifm-color-primary-lighter: #4d94ff;
+  --ifm-color-primary-lightest: #80b3ff;
   
-  --modern-secondary: #6366f1;
-  --modern-secondary-hover: #4f46e5;
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --ifm-code-font-size: 95%;
+  --ifm-navbar-height: 60px;
   
-  --modern-accent: #06b6d4;
-  --modern-accent-hover: #0891b2;
-  
-  --modern-success: #10b981;
-  --modern-warning: #f59e0b;
-  --modern-error: #ef4444;
-  
-  /* Neutral Colors */
-  --modern-gray-50: #f9fafb;
-  --modern-gray-100: #f3f4f6;
-  --modern-gray-200: #e5e7eb;
-  --modern-gray-300: #d1d5db;
-  --modern-gray-400: #9ca3af;
-  --modern-gray-500: #6b7280;
-  --modern-gray-600: #4b5563;
-  --modern-gray-700: #374151;
-  --modern-gray-800: #1f2937;
-  --modern-gray-900: #111827;
-  
-  /* Gradient Definitions */
-  --modern-gradient-primary: linear-gradient(135deg, var(--modern-primary) 0%, var(--modern-secondary) 100%);
-  --modern-gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --modern-gradient-card: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-  
-  /* Spacing Scale */
-  --modern-space-xs: 0.25rem;
-  --modern-space-sm: 0.5rem;
-  --modern-space-md: 1rem;
-  --modern-space-lg: 1.5rem;
-  --modern-space-xl: 2rem;
-  --modern-space-2xl: 3rem;
-  --modern-space-3xl: 4rem;
-  --modern-space-4xl: 6rem;
-  
-  /* Border Radius */
-  --modern-radius-sm: 0.375rem;
-  --modern-radius-md: 0.5rem;
-  --modern-radius-lg: 0.75rem;
-  --modern-radius-xl: 1rem;
-  --modern-radius-2xl: 1.5rem;
-  
-  /* Shadows */
-  --modern-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --modern-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --modern-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --modern-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --modern-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  
-  /* Typography */
-  --modern-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --modern-font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  
-  /* Docusaurus Overrides */
-  --ifm-font-family-base: var(--modern-font-family);
-  --ifm-font-family-monospace: var(--modern-font-mono);
-  --ifm-color-primary: var(--modern-primary);
-  --ifm-color-primary-dark: var(--modern-primary-hover);
-  --ifm-color-primary-darker: #003d99;
-  --ifm-color-primary-darkest: #002966;
-  --ifm-color-primary-light: var(--modern-primary-light);
-  --ifm-color-primary-lighter: var(--modern-primary-lighter);
-  --ifm-color-primary-lightest: var(--modern-primary-lightest);
-  
-  --ifm-code-font-size: 90%;
-  --ifm-code-border-radius: var(--modern-radius-md);
-  --ifm-pre-border-radius: var(--modern-radius-lg);
-  
-  --docusaurus-highlighted-code-line-bg: rgba(102, 102, 241, 0.1);
-  
-  /* Modern spacing */
-  --ifm-spacing-horizontal: var(--modern-space-lg);
-  --ifm-spacing-vertical: var(--modern-space-md);
-  
-  /* Modern borders */
-  --ifm-global-border-width: 1px;
-  --ifm-border-color: var(--modern-gray-200);
+  --docusaurus-highlighted-code-line-bg: rgba(0, 102, 255, 0.1);
 }
 
-/* Dark Mode - Enhanced */
 [data-theme='dark'] {
-  /* Dark Mode Colors */
-  --modern-primary: #4d94ff;
-  --modern-primary-hover: #80b3ff;
-  --modern-primary-light: #99c5ff;
-  --modern-primary-lighter: #b3d7ff;
-  --modern-primary-lightest: rgba(77, 148, 255, 0.1);
+  --ifm-color-primary: #4d94ff;
+  --ifm-color-primary-dark: #3384ff;
+  --ifm-color-primary-darker: #1a75ff;
+  --ifm-color-primary-darkest: #0066ff;
+  --ifm-color-primary-light: #6ca3ff;
+  --ifm-color-primary-lighter: #80b3ff;
+  --ifm-color-primary-lightest: #b3d1ff;
   
-  --modern-secondary: #818cf8;
-  --modern-secondary-hover: #a5b4fc;
-  
-  --modern-accent: #22d3ee;
-  --modern-accent-hover: #67e8f9;
-  
-  --modern-success: #34d399;
-  --modern-warning: #fbbf24;
-  --modern-error: #f87171;
-  
-  /* Dark Gradients */
-  --modern-gradient-hero: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
-  --modern-gradient-card: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-  
-  /* Dark Shadows */
-  --modern-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --modern-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --modern-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-  --modern-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-  --modern-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-  
-  /* Docusaurus Dark Overrides */
-  --ifm-color-primary: var(--modern-primary);
-  --ifm-color-primary-dark: var(--modern-primary-hover);
-  --ifm-color-primary-darker: var(--modern-primary-light);
-  --ifm-color-primary-darkest: var(--modern-primary-lighter);
-  --ifm-color-primary-light: #66a3ff;
-  --ifm-color-primary-lighter: #99c5ff;
-  --ifm-color-primary-lightest: #cce7ff;
-  
-  --docusaurus-highlighted-code-line-bg: rgba(129, 140, 248, 0.1);
-  --ifm-border-color: var(--modern-gray-700);
-  
-  /* Enhanced dark background */
-  --ifm-background-color: #0f0f23;
-  --ifm-background-surface-color: #1a1a2e;
+  --docusaurus-highlighted-code-line-bg: rgba(77, 148, 255, 0.2);
 }
 
-/* Modern Global Styles */
-
-/* Smooth scrolling for the entire page */
+/* Base styles */
 html {
   scroll-behavior: smooth;
 }
 
-/* Enhanced body styles */
 body {
   font-feature-settings: 'liga' 1, 'kern' 1;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Reduce max content width for better readability */
-.container.container--fluid {
-  max-width: 1200px;
-}
-
-/* Modern button styles */
-.button {
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
-  border-radius: var(--modern-radius-lg);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: none;
-  box-shadow: var(--modern-shadow-sm);
-  font-family: var(--modern-font-family);
+  letter-spacing: -0.01em;
 }
 
-.button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--modern-shadow-md);
-}
-
-.button--primary {
-  background: var(--modern-gradient-primary);
-  color: white;
-  border: none;
-}
-
-.button--secondary {
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--modern-primary);
-  border: 1px solid var(--modern-primary);
-  backdrop-filter: blur(10px);
-}
-
-[data-theme='dark'] .button--secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--modern-primary);
-  border: 1px solid var(--modern-primary);
-}
-
-.button--outline {
-  background: transparent;
-  border: 2px solid var(--modern-primary);
-  color: var(--modern-primary);
-}
-
-.button--outline:hover {
-  background: var(--modern-primary);
-  color: white;
-}
-
-/* Make code blocks wrap when necessary */
-.theme-code-block pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-/* Responsive images */
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Respect users with motion sensitivities */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Improve link visibility and focus */
+/* Links */
 a {
-  text-underline-offset: 3px;
-}
-a:focus-visible {
-  outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 2px;
-}
-
-/* Modern Sidebar */
-.theme-doc-sidebar-container {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid var(--modern-gray-200);
-}
-
-[data-theme='dark'] .theme-doc-sidebar-container {
-  background: rgba(15, 15, 35, 0.95);
-  border-right: 1px solid var(--modern-gray-700);
-}
-
-.menu__list-item > .menu__link {
-  padding: 0.75rem 1rem;
-  margin: 0.25rem 0;
-  border-radius: var(--modern-radius-md);
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.menu__link:hover {
-  background: var(--modern-primary-lightest);
-  color: var(--modern-primary) !important;
-  transform: translateX(2px);
-}
-
-.menu__link--active {
-  background: var(--modern-primary);
-  color: white !important;
-  font-weight: 600;
-  box-shadow: var(--modern-shadow-sm);
-}
-
-.menu__link--active:hover {
-  background: var(--modern-primary-hover);
-  color: white !important;
-  transform: translateX(0);
-}
-
-/* Sidebar scrolling */
-.theme-doc-sidebar-menu {
-  scrollbar-width: thin;
-  scrollbar-color: var(--modern-gray-400) transparent;
-}
-
-/* Fix sidebar category headers */
-.menu__list-item--collapsed .menu__caret:before,
-.menu__list-item .menu__caret:before {
-  transform: rotate(90deg) !important;
-  transition: transform 0.2s ease;
-}
-
-.menu__list-item--collapsed .menu__caret:before {
-  transform: rotate(0deg) !important;
-}
-
-/* Headings rhythm */
-h1, h2, h3 {
-  letter-spacing: -0.02em;
-}
-
-/* Modern Cards */
-.card {
-  border-radius: var(--modern-radius-xl);
-  box-shadow: var(--modern-shadow-md);
-  border: 1px solid var(--modern-gray-200);
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-}
-
-[data-theme='dark'] .card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--modern-gray-700);
-  backdrop-filter: blur(20px);
-}
-
-.card:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: var(--modern-shadow-xl);
-}
-
-/* Code blocks readability */
-code, pre code {
-  font-variant-ligatures: none;
-}
-.theme-code-block {
-  border-radius: 10px;
-}
-
-/* Improve focus visibility globally */
-:focus-visible {
-  outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 3px;
-}
-
-/* Modern Table of Contents */
-.table-of-contents {
-  border: 1px solid var(--modern-gray-200);
-  border-radius: var(--modern-radius-lg);
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-}
-
-[data-theme='dark'] .table-of-contents {
-  border: 1px solid var(--modern-gray-700);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.table-of-contents__link {
-  border-radius: var(--modern-radius-sm);
-  padding: 0.25rem 0.5rem;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.table-of-contents__link:hover {
-  background: var(--modern-primary-lightest);
-  color: var(--modern-primary) !important;
-  text-decoration: none;
-  transform: translateX(2px);
-}
-
-.table-of-contents__link--active {
-  background: var(--modern-primary);
-  color: white !important;
-  font-weight: 600;
-}
-
-/* Modern breadcrumbs */
-.breadcrumbs {
-  margin-bottom: 2rem;
-}
-
-.breadcrumbs__link {
-  color: var(--modern-gray-600);
   transition: color 0.2s ease;
 }
 
-.breadcrumbs__link:hover {
-  color: var(--modern-primary);
+a:hover {
+  text-decoration: underline;
 }
 
-[data-theme='dark'] .breadcrumbs__link {
-  color: var(--modern-gray-400);
-}
-
-/* Fix z-index stacking context */
-.navbar {
-  z-index: 1000;
-  position: sticky;
-}
-
-.theme-doc-sidebar-container {
-  z-index: 100;
-  position: relative;
-}
-
-.main-wrapper {
-  z-index: 1;
-  position: relative;
-}
-
-/* Fix for any floating elements */
+/* Navbar */
 .navbar__logo {
-  z-index: 1;
-  position: relative;
-}
-
-/* Ensure main content is properly positioned */
-main {
-  position: relative;
-  z-index: 1;
-}
-
-/* Hide any problematic floating elements */
-.floating-ui,
-.floating-banner,
-[class*="floating"],
-[style*="position: fixed"],
-[style*="position: absolute"][style*="z-index"] {
-  display: none !important;
-}
-
-/* Specific fix for the green element issue */
-div[style*="background"][style*="green"],
-div[style*="background-color: green"],
-.green-banner,
-.notification-banner {
-  display: none !important;
-}
-
-/* Ensure PWA install button doesn't interfere */
-.PWAInstallButton,
-button[class*="install"],
-button[class*="pwa"] {
-  display: none !important;
-}
-
-/* Fix announcement bar if it's causing issues */
-.announcementBar {
-  position: relative;
-  z-index: 999;
-}
-
-/* Modern Documentation Layout */
-.docs-wrapper {
-  padding-top: 0 !important;
-}
-
-/* Main documentation content */
-.theme-doc-markdown {
-  padding: 2rem 0;
-}
-
-/* Documentation page header */
-.theme-doc-markdown h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: var(--ifm-color-content-primary);
-  line-height: 1.2;
-}
-
-.theme-doc-markdown h2 {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  color: var(--ifm-color-content-primary);
-  border-bottom: 2px solid var(--modern-gray-200);
-  padding-bottom: 0.5rem;
-}
-
-[data-theme='dark'] .theme-doc-markdown h2 {
-  border-bottom-color: var(--modern-gray-700);
-}
-
-/* Documentation content spacing */
-.theme-doc-markdown p {
-  line-height: 1.7;
-  margin-bottom: 1.2rem;
-}
-
-.theme-doc-markdown ul {
-  margin-bottom: 1.2rem;
-}
-
-.theme-doc-markdown li {
-  margin-bottom: 0.5rem;
-  line-height: 1.6;
-}
-
-/* Fix any floating buttons or icons that might overlap */
-[class*="floatingButton"],
-[class*="floating-button"],
-.theme-back-to-top-button {
-  z-index: 5;
-}
-
-/* Ensure proper spacing for docs content */
-article {
-  position: relative;
-  z-index: 1;
-}
-
-/* Fix for PWA install button if it's overlapping */
-.PWAInstallButton {
-  z-index: 5;
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-}
-
-/* Ensure announcement bar doesn't overlap */
-.announcementBar {
-  position: relative;
-  z-index: 15;
-}
-
-/* Modern Navbar */
-.navbar {
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.85);
-  border-bottom: 1px solid var(--modern-gray-200);
-  box-shadow: var(--modern-shadow-sm);
-}
-
-[data-theme='dark'] .navbar {
-  background: rgba(15, 15, 35, 0.9);
-  border-bottom: 1px solid var(--modern-gray-700);
+  margin-right: 0.5rem;
 }
 
 .navbar__item {
   font-weight: 500;
 }
 
-.navbar__link {
-  border-radius: var(--modern-radius-md);
-  transition: all 0.2s ease;
-  padding: 0.5rem 1rem;
+/* Sidebar */
+.menu__link {
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease;
 }
 
-.navbar__link:hover {
-  background: var(--modern-primary-lightest);
-  color: var(--modern-primary) !important;
+.menu__link:hover {
+  background-color: var(--ifm-menu-color-background-hover);
 }
 
-/* Additional spacing for main content to avoid overlaps */
-.main-wrapper {
-  padding-top: var(--ifm-navbar-height);
-  min-height: calc(100vh - var(--ifm-navbar-height));
+.menu__link--active {
+  font-weight: 600;
 }
 
-/* Fix for any potential logo overflow issues */
-.navbar__brand {
-  overflow: hidden;
-  max-height: var(--ifm-navbar-height);
+/* Cards */
+.card {
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.navbar__logo img {
-  max-height: 2rem;
-  width: auto;
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* Modern Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
+/* Code blocks */
+pre {
+  border-radius: 0.5rem;
+}
+
+code {
+  font-size: 0.9em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background-color: var(--ifm-code-background);
+}
+
+/* Tables */
+table {
+  margin: 1.5rem 0;
+}
+
+th {
+  font-weight: 600;
+  background-color: var(--ifm-table-head-background);
+}
+
+/* Buttons */
+.button {
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: transform 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+/* Hide unnecessary elements */
+.announcementBar {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  .navbar__toggle {
+    margin-right: 0;
   }
 }
 
+/* Simple animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -586,115 +162,6 @@ article {
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* Animation utilities */
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.8s ease-out;
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* Modern scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--modern-gray-100);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--modern-gray-400);
-  border-radius: var(--modern-radius-sm);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--modern-gray-500);
-}
-
-[data-theme='dark'] ::-webkit-scrollbar-track {
-  background: var(--modern-gray-800);
-}
-
-[data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: var(--modern-gray-600);
-}
-
-[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: var(--modern-gray-500);
-}
-
-/* Modern selection styles */
-::selection {
-  background: var(--modern-primary-lightest);
-  color: var(--modern-primary);
-}
-
-[data-theme='dark'] ::selection {
-  background: var(--modern-primary);
-  color: white;
-}
-
-/* Targeted layout fixes */
-
-/* Ensure clean document flow */
-body {
-  overflow-x: hidden;
-}
-
-.main-wrapper {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Fix specific overlapping issues */
-.docs-wrapper .container {
-  position: relative;
-  z-index: 1;
-}
-
-.theme-doc-markdown {
-  position: relative;
-  z-index: 1;
-  background: var(--ifm-background-color);
-}
-
-/* Ensure sidebar doesn't overlap content */
-.theme-doc-sidebar-container {
-  position: relative;
-  z-index: 10;
-}
-
-.theme-doc-toc-desktop {
-  position: relative;
-  z-index: 5;
+.docMainContainer {
+  animation: fadeIn 0.3s ease;
 }
