@@ -1,0 +1,9 @@
+# This file is for convenience - actual compose files are in docker/ directory
+# 
+# Production: docker-compose -f docker/docker-compose.yml up -d
+# Development: docker-compose -f docker-compose.dev.yml up -d (or just: docker-compose up -d)
+
+# You can also use this file for development by including the dev compose file:
+version: '3.8'
+include:
+  - docker-compose.dev.yml
