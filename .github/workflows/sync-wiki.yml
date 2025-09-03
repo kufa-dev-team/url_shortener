@@ -7,8 +7,8 @@ on:
       - main
       - master
     paths:
-      - 'docs/**'
-      - 'README.md'
+      - 'docs-site/docs/**'
+      - 'docs-site/README.md'
       - '.github/workflows/sync-wiki.yml'
   
   # Allow manual trigger
@@ -45,7 +45,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Make sync script executable
-        run: chmod +x ./scripts/sync-to-wiki.sh
+        run: chmod +x ./docs-site/scripts/sync-to-wiki.sh
       
       - name: Sync to Wiki (Manual Trigger)
         if: github.event_name == 'workflow_dispatch'
@@ -59,13 +59,13 @@ jobs:
           if [ "${{ inputs.dry_run }}" == "true" ]; then
             OPTIONS="$OPTIONS --dry-run"
           fi
-          ./scripts/sync-to-wiki.sh $OPTIONS
+          cd docs-site && ./scripts/sync-to-wiki.sh $OPTIONS
       
       - name: Sync to Wiki (Automatic)
         if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/sync-to-wiki.sh
+        run: cd docs-site && ./scripts/sync-to-wiki.sh
       
       - name: Summary
         if: success()
