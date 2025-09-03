@@ -1,214 +1,26 @@
 /**
- * Modern Hero Section with Glassmorphism and Animations
+ * Clean hero section styles
  */
 
 .heroBanner {
-  padding: 8rem 0 10rem;
+  padding: 4rem 0;
   text-align: center;
   position: relative;
   overflow: hidden;
-  background: var(--modern-gradient-hero);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  min-height: 70vh;
-  display: flex;
-  align-items: center;
 }
 
-/* Animated background elements */
-.heroBanner::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(102, 102, 241, 0.2) 0%, transparent 50%);
-  animation: float 6s ease-in-out infinite;
-  z-index: 1;
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
 }
 
-.heroBanner::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  right: -50%;
-  bottom: -50%;
-  background: 
-    conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 90deg, transparent 180deg, rgba(255, 255, 255, 0.03) 270deg, transparent 360deg);
-  animation: float 8s ease-in-out infinite reverse;
-  z-index: 1;
-}
-
-.heroBanner .container {
-  position: relative;
-  z-index: 2;
-}
-
-/* Hero content styling */
-.heroBanner h1 {
-  font-size: 4rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.heroBanner .hero__subtitle {
-  font-size: 1.5rem;
-  font-weight: 400;
-  margin-bottom: 3rem;
-  opacity: 0.9;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.5;
-}
-
-/* Modern glassmorphic buttons */
 .buttons {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.buttons .button {
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: var(--modern-radius-xl);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  position: relative;
-  overflow: hidden;
-}
-
-.buttons .button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.buttons .button:hover::before {
-  left: 100%;
-}
-
-.buttons .button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-/* Primary button */
-.buttons .button--secondary {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.buttons .button--secondary:hover {
-  background: rgba(255, 255, 255, 0.25);
-  color: white;
-}
-
-/* Outline button */
-.buttons .button--outline {
-  background: transparent;
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-}
-
-.buttons .button--outline:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
-/* Floating elements */
-.heroFloatingElement {
-  position: absolute;
-  opacity: 0.1;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.heroFloatingElement:nth-child(1) {
-  top: 10%;
-  left: 10%;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: float 4s ease-in-out infinite;
-}
-
-.heroFloatingElement:nth-child(2) {
-  top: 20%;
-  right: 15%;
-  width: 60px;
-  height: 60px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: float 5s ease-in-out infinite 1s;
-}
-
-.heroFloatingElement:nth-child(3) {
-  bottom: 30%;
-  left: 20%;
-  width: 80px;
-  height: 80px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: float 6s ease-in-out infinite 2s;
-}
-
-/* Mobile responsiveness */
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 4rem 1rem 6rem;
-    min-height: 60vh;
-  }
-  
-  .heroBanner h1 {
-    font-size: 2.5rem;
-  }
-  
-  .heroBanner .hero__subtitle {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-  }
-  
-  .buttons {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .buttons .button {
-    width: 100%;
-    max-width: 280px;
-  }
-}
-
-@media screen and (max-width: 576px) {
-  .heroBanner h1 {
-    font-size: 2rem;
-  }
-  
-  .heroBanner .hero__subtitle {
-    font-size: 1.1rem;
-  }
+  margin-top: 2rem;
 }

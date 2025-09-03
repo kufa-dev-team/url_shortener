@@ -78,14 +78,10 @@ export default function Features(): React.ReactElement {
         </div>
         
         <div className={styles.featuresGrid}>
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <div 
               key={feature.title} 
-              className={clsx(styles.featureCard, 'animate-fade-in-up')}
-              style={{
-                animationDelay: `${index * 0.15}s`,
-                '--feature-color': feature.color
-              } as React.CSSProperties & { '--feature-color': string }}
+              className={styles.featureCard}
             >
               <div className={styles.featureIcon}>
                 {feature.icon}
@@ -94,7 +90,6 @@ export default function Features(): React.ReactElement {
                 <h3 className={styles.featureTitle}>{feature.title}</h3>
                 <p className={styles.featureDescription}>{feature.description}</p>
               </div>
-              <div className={styles.featureGlow}></div>
             </div>
           ))}
         </div>

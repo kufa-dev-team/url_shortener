@@ -114,15 +114,13 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-  hideOnScroll: true,
+      hideOnScroll: true,
       title: 'URL Shortener',
       logo: {
         alt: 'URL Shortener Logo',
         src: 'img/logo.webp',
         width: 40,
         height: 40,
-      },
-        height: 32,
       },
       items: [
         {

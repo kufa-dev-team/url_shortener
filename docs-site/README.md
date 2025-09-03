@@ -59,7 +59,6 @@ This command starts a local development server at `http://localhost:3000`. Most 
 
 ```
 docs-site/
-├── blog/                  # Blog posts
 ├── docs/                  # Documentation files
 │   ├── api/              # API documentation
 │   ├── architecture/     # Architecture guides
@@ -94,7 +93,6 @@ The modern design system is defined in `src/css/custom.css`:
 ### Content
 
 - **Documentation**: Edit files in the `docs/` directory
-- **Blog Posts**: Add new posts in the `blog/` directory
 - **Homepage**: Customize `src/pages/index.tsx`
 
 ## 🏭 Building for Production
