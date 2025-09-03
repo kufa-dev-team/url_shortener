@@ -27,7 +27,8 @@ else
 fi
 
 # Calculate container name based on prefix
-POSTGRES_CONTAINER_NAME="${PROJECT_PREFIX}-postgres-1"
+# Note: We use explicit container names in docker-compose, not generated ones
+POSTGRES_CONTAINER_NAME="urlshortener-postgres"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -44,7 +45,8 @@ if ! docker ps --filter "name=${POSTGRES_CONTAINER_NAME}" --filter "status=runni
 fi
 
 # Check if network exists (Docker Compose creates a default network named after the directory)
-NETWORK_NAME="${PROJECT_PREFIX}_default"
+# Note: We use explicit network name in docker-compose
+NETWORK_NAME="urlshortener_network"
 if ! docker network ls | grep -q "$NETWORK_NAME"; then
     echo "❌ Error: Docker network '$NETWORK_NAME' not found."
     echo "   Please start your Docker Compose services first:"
@@ -64,7 +66,7 @@ else
 fi
 
 echo "🏗️  Building migration Docker image..."
-docker build -f Dockerfile.migration -t "migration-runner-$TARGET_ENV" .
+docker build -f docker/Dockerfile.migration -t "migration-runner-$TARGET_ENV" .
 
 echo "🚀 Running EF Core migrations for $TARGET_ENV..."
 docker run --rm --network "$NETWORK_NAME" "migration-runner-$TARGET_ENV"  \
