@@ -3,15 +3,15 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS migration
 
 WORKDIR /app
 
-# Copy solution and core project files (exclude test projects for migration)
-COPY *.sln ./
+# Copy core project files (exclude solution file to avoid test project references)
 COPY src/API/API.csproj ./src/API/
 COPY src/Application/Application.csproj ./src/Application/
 COPY src/Domain/Domain.csproj ./src/Domain/
 COPY src/Infrastructure/Infrastructure.csproj ./src/Infrastructure/
 
-# Restore dependencies (this layer will be cached if project files haven't changed)
-RUN dotnet restore --runtime linux-musl-x64
+# Restore dependencies for the Infrastructure project (this layer will be cached if project files haven't changed)
+RUN dotnet restore src/Infrastructure/Infrastructure.csproj --runtime linux-musl-x64
+RUN dotnet restore src/API/API.csproj --runtime linux-musl-x64
 
 # Copy source code
 COPY src/ ./src/

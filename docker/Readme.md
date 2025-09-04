@@ -19,14 +19,17 @@ docker/
 
 ### Development Environment
 ```bash
-# Start development environment (includes Redis Commander & Supabase Studio)
-docker-compose -f docker/docker-compose.dev.yml up
+# Start development environment (includes management UIs and monitoring)
+docker-compose up -d  # Note: runs from project root, uses docker-compose.dev.yml
 
 # Access services:
+# - PgAdmin: http://localhost:8082 (admin@admin.com/admin)
 # - Redis Commander: http://localhost:8081 (admin/admin)
-# - Supabase Studio: http://localhost:8080
-# - PostgreSQL: localhost:5432
-# - Redis: localhost:6379
+# - Grafana: http://localhost:3000 (admin/admin)
+# - Prometheus: http://localhost:9090
+# - cAdvisor: http://localhost:8080
+# - PostgreSQL: localhost:5432 (postgres/postgres)
+# - Redis: localhost:6379 (no auth in dev)
 ```
 
 ### Production Environment
@@ -43,11 +46,14 @@ docker-compose -f docker/docker-compose.yml up -d
 | Feature | Development | Production |
 |---------|-------------|------------|
 | **API Service** | Not included (run locally) | Included with full config |
+| **Container Names** | `urlshortener-*` | `urlshortener-*` |
+| **Network Name** | `url_shortener_urlshortener-network` | `urlshortener_network` |
 | **Database Ports** | Exposed (5432:5432) | Internal only (expose 5432) |
 | **Redis Ports** | Exposed (6379:6379) | Internal only (expose 6379) |
-| **Management UIs** | ✅ Redis Commander, Supabase Studio | ❌ Not included |
+| **Management UIs** | ✅ PgAdmin, Redis Commander, Grafana | ❌ Not included |
+| **Monitoring Stack** | ✅ Full monitoring (Prometheus, Grafana, cAdvisor) | ❌ Not included |
 | **Passwords** | Simple (`postgres`, no Redis auth) | Secure (from .env file) |
-| **Platform** | `linux/arm64` (Apple Silicon) | Multi-platform |
+| **Platform** | `linux/arm64` (Apple Silicon optimized) | Multi-platform |
 | **Security** | Basic | Production-hardened |
 
 ## Environment Variables
@@ -206,12 +212,39 @@ docker-compose -f docker/docker-compose.yml logs redis
 ```
 
 #### Port conflicts
-```bash
-# Check what's using port 5432
-netstat -tulpn | grep 5432
 
-# Stop conflicting services
-sudo systemctl stop postgresql
+**Common issue**: "Bind for 0.0.0.0:XXXX failed: port is already allocated"
+
+```bash
+# Check what processes are using common ports
+lsof -i :5432  # PostgreSQL
+lsof -i :6379  # Redis  
+lsof -i :3000  # Grafana
+lsof -i :8080  # cAdvisor
+lsof -i :8081  # Redis Commander
+lsof -i :9090  # Prometheus
+
+# Find and stop conflicting Docker containers
+docker ps | grep -E "(postgres|redis|grafana|prometheus)"
+docker stop container_name_here
+
+# Alternative: Stop entire conflicting project
+# If you have another project using the same ports:
+docker-compose -f /path/to/other/project/docker-compose.yml down
+
+# Nuclear option: Stop all Docker containers
+docker stop $(docker ps -q)
+```
+
+**Real-world example** (what we experienced):
+```bash
+# Problem: grad_tracking project was using the same ports
+# Solution: Stop conflicting containers
+docker stop grad_tracking_redis grad_tracking_postgres grad_tracking_app_dev
+docker stop grad_tracking_keycloak grad_tracking_prometheus
+
+# Then start your URL shortener services
+docker-compose up -d
 ```
 
 #### Permission denied
@@ -266,24 +299,39 @@ The application uses Entity Framework Core for database management. After starti
 
 ### Migration Scripts (Recommended)
 
-Use the provided migration scripts for a streamlined experience:
+⚠️ **Critical**: The migration script requires the **production** Docker setup to be running.
 
 ```bash
-# Linux/macOS
-./scripts/migrate.sh
+# STEP 1: Ensure production containers are running
+docker-compose -f docker/docker-compose.yml up -d
 
-# Windows PowerShell  
-.\scripts\migrate.ps1
-
-# Windows with help
-.\scripts\migrate.ps1 -Help
+# STEP 2: Run migration script
+./scripts/migrate.sh        # Linux/macOS
+.\scripts\migrate.ps1       # Windows PowerShell
 ```
 
+**What the script expects**:
+- Container name: `urlshortener-postgres` (⚠️ **Not** `docker-postgres-1`)
+- Network name: `urlshortener_network` (⚠️ **Not** `docker_default`)
+- Environment file: `.env` in project root
+
 These scripts will:
-1. ✅ Check Docker prerequisites
-2. 🏗️ Build migration Docker image  
-3. 🚀 Apply EF Core migrations
+1. ✅ Check Docker prerequisites (correct container and network names)
+2. 🏗️ Build migration Docker image using `docker/Dockerfile.migration`
+3. 🚀 Apply EF Core migrations to the running PostgreSQL container
 4. ✅ Verify completion
+
+**Troubleshooting migrations**:
+```bash
+# Verify required containers are running
+docker ps --filter "name=urlshortener-postgres"
+
+# Verify network exists
+docker network ls | grep urlshortener_network
+
+# Check container logs if migration fails
+docker logs urlshortener-postgres
+```
 
 ### Manual Migration (Advanced)
 

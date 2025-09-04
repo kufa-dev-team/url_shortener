@@ -13,6 +13,15 @@
   [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 </div>
 
+## 🚀 Quick Reference
+
+| Scenario | Commands | Notes |
+|----------|----------|-------|
+| **Development** | `docker-compose up -d`<br>`dotnet run --project src/API` | For daily coding, debugging |
+| **Production/Migration** | `docker-compose -f docker/docker-compose.yml up -d`<br>`./scripts/migrate.sh` | Required for database migrations |
+| **Fix Port Conflicts** | `docker ps`<br>`docker stop conflicting_container` | Check troubleshooting section |
+| **Reset Everything** | `docker-compose down -v` | ⚠️ Destroys all data |
+
 ## 🎯 Overview
 
 Transform long URLs into short, branded links:
@@ -39,7 +48,9 @@ src/
 └── Infrastructure/       # Data access and external services
 ```
 
-## 🚀 Getting Started
+## 🎗️ Getting Started
+
+🚀 **New here?** Check out our [Quick Setup Guide](SETUP.md) to get running in under 5 minutes!
 
 ### Prerequisites
 
@@ -51,33 +62,45 @@ src/
 
 ### Quick Start with Docker
 
+⚠️ **Important**: Check for port conflicts before starting! This project uses common ports (5432, 6379, 3000, 8080, 8081, 9090) that might already be in use.
+
 1. **Setup environment configuration:**
 ```bash
-# Copy environment configuration
-cp .env.example .env  # Edit as needed
+# Copy and edit environment configuration
+cp .env.example .env  # Edit passwords and settings as needed
 ```
 
-2. **Start the services:**
-```bash
-# Production (full application stack)
-docker-compose -f docker/docker-compose.yml up -d
+2. **Choose your setup:**
 
-# OR Development (infrastructure only - run API locally)
-docker-compose -f docker/docker-compose.dev.yml up -d
+#### Option A: Development Environment (Recommended for local development)
+```bash
+# Start development infrastructure (databases + monitoring tools)
+docker-compose up -d
+
+# Run API locally for debugging
+dotnet run --project src/API
+```
+
+#### Option B: Production Environment (Full containerized stack)
+```bash
+# Start full application stack in containers
+docker-compose -f docker/docker-compose.yml up -d
 ```
 
 3. **Apply database migrations:**
 ```bash
-# Linux/macOS
+# For production setup (required)
 ./scripts/migrate.sh
 
-# Windows PowerShell
-.\scripts\migrate.ps1
+# For development setup (if using containerized API)
+# The migration script automatically detects the correct setup
 ```
 
 4. **Access the application:**
-- **Production**: http://localhost:5000
-- **Development**: Run API locally with `dotnet run --project src/API`
+- **Development API**: http://localhost:5135 (when running locally)
+- **Production API**: http://localhost:5000 (containerized)
+- **Database**: Available at `localhost:5432`
+- **Redis**: Available at `localhost:6379`
 
 ### Development Services
 
@@ -87,13 +110,88 @@ Once Docker Compose is running, you'll have access to:
 |---------|-----|---------|
 | PostgreSQL | `localhost:5432` | Main database |
 | Redis | `localhost:6379` | Caching layer |
-| Supabase Studio | http://localhost:8080 | Modern PostgreSQL management UI |
+| PgAdmin | http://localhost:8082 | PostgreSQL management UI |
 | Redis Commander | http://localhost:8081 | Redis management UI |
+| Grafana | http://localhost:3000 | Monitoring dashboards |
+| Prometheus | http://localhost:9090 | Metrics collection |
+| cAdvisor | http://localhost:8080 | Container monitoring |
 
 **Default credentials:**
 - PostgreSQL: `postgres/postgres`
+- PgAdmin: `admin@admin.com/admin`
 - Redis Commander: `admin/admin`
-- Supabase Studio: Direct database connection (no separate auth)
+- Grafana: `admin/admin`
+
+⚠️ **Port Conflicts**: If you encounter "port already allocated" errors, you may need to stop other Docker containers or services using these ports.
+
+## 📊 Development vs Production Setup Guide
+
+### Development Setup (`docker-compose.dev.yml`)
+
+**When to use**: Local development, debugging, testing
+
+**What it includes**:
+- PostgreSQL (exposed on port 5432)
+- Redis (exposed on port 6379)  
+- PgAdmin (PostgreSQL management UI)
+- Redis Commander (Redis management UI)
+- Grafana (monitoring dashboards)
+- Prometheus (metrics collection)
+- cAdvisor (container monitoring)
+- Various exporters for monitoring
+
+**How to use**:
+```bash
+# Start development infrastructure
+docker-compose up -d
+
+# Run your API locally for debugging
+dotnet run --project src/API
+# API will be available at http://localhost:5135
+```
+
+**Benefits**:
+- ✅ Full debugging capabilities in your IDE
+- ✅ Hot reload and fast iteration
+- ✅ Access to management UIs
+- ✅ All ports exposed for easy access
+
+### Production Setup (`docker/docker-compose.yml`)
+
+**When to use**: Production deployments, migration testing, full containerization
+
+**What it includes**:
+- Complete ASP.NET Core API (containerized)
+- PostgreSQL (internal Docker network only)
+- Redis (internal Docker network only)
+- Optimized for security and performance
+
+**How to use**:
+```bash
+# Start full containerized stack
+docker-compose -f docker/docker-compose.yml up -d
+
+# Run migrations (required for database setup)
+./scripts/migrate.sh
+
+# API available at http://localhost:5000
+```
+
+**Benefits**:
+- ✅ Production-like environment
+- ✅ Security-hardened (no unnecessary port exposure)
+- ✅ Container-based deployment testing
+- ✅ Required for running migrations
+
+### When to Switch Between Setups
+
+| Scenario | Recommended Setup | Command |
+|----------|-------------------|----------|
+| Daily development | Development | `docker-compose up -d` |
+| Database migrations | Production | `docker-compose -f docker/docker-compose.yml up -d` |
+| Testing containerized app | Production | `docker-compose -f docker/docker-compose.yml up -d` |
+| Debugging API issues | Development | `docker-compose up -d` + local API |
+| Production deployment | Production | `docker-compose -f docker/docker-compose.yml up -d` |
 
 ### Local Development (Alternative)
 
@@ -378,20 +476,25 @@ See `compose/README.md` for detailed Docker Compose usage instructions.
 The application uses Entity Framework Core for database management. After starting PostgreSQL, apply migrations using the provided scripts:
 
 ### Migration Scripts (Recommended)
-```bash
-# Linux/macOS
-./scripts/migrate.sh
 
-# Windows PowerShell
-.\scripts\migrate.ps1 -Help  # View help
-.\scripts\migrate.ps1        # Run migration
+⚠️ **Important**: The migration script requires the **production** Docker setup to be running:
+
+```bash
+# REQUIRED: Start production containers first
+docker-compose -f docker/docker-compose.yml up -d
+
+# THEN run migration
+./scripts/migrate.sh        # Linux/macOS
+.\scripts\migrate.ps1       # Windows PowerShell
 ```
 
 The migration scripts will:
-1. ✅ Verify Docker prerequisites (PostgreSQL running, network exists)
+1. ✅ Verify Docker prerequisites (container `urlshortener-postgres` running, network `urlshortener_network` exists)
 2. 🏗️ Build temporary migration Docker image with EF Core tools
 3. 🚀 Apply all pending database migrations
 4. ✅ Confirm successful completion
+
+**Note**: The migration script looks for specific container names (`urlshortener-postgres`) and network names (`urlshortener_network`) that are created by the production Docker Compose setup.
 
 ### Manual Migration (Advanced)
 ```bash
@@ -409,6 +512,72 @@ If migrations fail:
 - Verify Docker network exists: `docker network ls | grep urlshortener`
 - Check .env file credentials
 - Review migration logs for specific errors
+
+## 🔧 Troubleshooting
+
+### Docker Port Conflicts
+
+If you encounter "port already allocated" errors, follow these steps:
+
+#### 1. Identify Conflicting Services
+```bash
+# Check what's using specific ports
+lsof -i :5432  # PostgreSQL
+lsof -i :6379  # Redis
+lsof -i :3000  # Grafana
+lsof -i :8080  # cAdvisor
+lsof -i :8081  # Redis Commander
+lsof -i :9090  # Prometheus
+```
+
+#### 2. Stop Conflicting Docker Containers
+```bash
+# List all running containers
+docker ps
+
+# Stop specific conflicting containers
+docker stop container_name_here
+
+# Or stop all containers from another project
+docker-compose -f /path/to/other/project/docker-compose.yml down
+```
+
+#### 3. Common Port Conflicts
+- **Port 5432**: Usually PostgreSQL from another project
+- **Port 6379**: Usually Redis from another project  
+- **Port 3000**: Usually Grafana or React dev server
+- **Port 8080**: Usually Keycloak or other web applications
+- **Port 9090**: Usually Prometheus from another monitoring stack
+
+#### 4. Alternative: Change Ports
+If you can't stop the conflicting services, modify the port mappings in `docker-compose.dev.yml`:
+```yaml
+postgres:
+  ports:
+    - "15432:5432"  # Changed from 5432:5432
+```
+
+### Migration Issues
+
+#### Container Name Mismatches
+If the migration script reports container not found:
+```bash
+# Check actual container names
+docker ps --filter "name=postgres"
+
+# The migration script expects 'urlshortener-postgres'
+# If your container has a different name, the script needs updating
+```
+
+#### Network Issues
+```bash
+# Check if the Docker network exists
+docker network ls | grep urlshortener
+
+# If missing, restart Docker Compose
+docker-compose down
+docker-compose up -d
+```
 
 ## 🚀 Future Enhancements
 
