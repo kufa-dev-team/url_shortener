@@ -1,0 +1,57 @@
+{
+  "repository": {
+    "owner": "kufa-dev-team",
+    "name": "url_shortener"
+  },
+  "sync": {
+    "docsDirectory": "./docs",
+    "wikiDirectory": "./wiki-temp",
+    "cleanBeforeSync": false,
+    "excludePatterns": [
+      "**/node_modules/**",
+      "**/test/**",
+      "**/*.test.md"
+    ],
+    "includePatterns": [
+      "**/*.md"
+    ]
+  },
+  "mapping": {
+    "homePageSource": "intro.md",
+    "createSidebar": true,
+    "sidebarTitle": "Navigation",
+    "pathTransform": {
+      "type": "flatten",
+      "separator": "-"
+    },
+    "customMappings": [
+      {
+        "source": "getting-started.md",
+        "target": "Quick-Start.md"
+      },
+      {
+        "source": "architecture/clean-architecture.md",
+        "target": "Architecture-Overview.md"
+      }
+    ]
+  },
+  "content": {
+    "convertRelativeLinks": true,
+    "addSourceHeader": true,
+    "preserveFrontMatter": false,
+    "customHeaders": {
+      "enabled": true,
+      "template": "<!-- Generated from: {source} on {date} -->"
+    }
+  },
+  "github": {
+    "commitMessage": "Sync documentation from docs-site",
+    "authorName": "github-actions[bot]",
+    "authorEmail": "github-actions[bot]@users.noreply.github.com"
+  },
+  "advanced": {
+    "maxConcurrentFiles": 10,
+    "retryAttempts": 3,
+    "verboseLogging": false
+  }
+}

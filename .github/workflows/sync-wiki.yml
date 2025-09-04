@@ -1,0 +1,89 @@
+name: Sync Documentation to Wiki
+
+on:
+  # Trigger on push to main branch
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docs-site/docs/**'
+      - 'docs-site/README.md'
+      - '.github/workflows/sync-wiki.yml'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      clean:
+        description: 'Clean wiki before sync'
+        required: false
+        default: 'false'
+        type: boolean
+      dry_run:
+        description: 'Perform dry run only'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    name: Sync Documentation to Wiki
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Make sync script executable
+        run: chmod +x ./docs-site/scripts/sync-to-wiki.sh
+      
+      - name: Sync to Wiki (Manual Trigger)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OPTIONS=""
+          if [ "${{ inputs.clean }}" == "true" ]; then
+            OPTIONS="$OPTIONS --clean"
+          fi
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
+            OPTIONS="$OPTIONS --dry-run"
+          fi
+          cd docs-site && ./scripts/sync-to-wiki.sh $OPTIONS
+      
+      - name: Sync to Wiki (Automatic)
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cd docs-site && ./scripts/sync-to-wiki.sh
+      
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ Wiki Synchronization Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Documentation has been successfully synchronized to the wiki." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Synced from:" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View the wiki: [https://github.com/${{ github.repository }}/wiki](https://github.com/${{ github.repository }}/wiki)" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Error Summary
+        if: failure()
+        run: |
+          echo "## ❌ Wiki Synchronization Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The wiki synchronization process encountered an error." >> $GITHUB_STEP_SUMMARY
+          echo "Please check the logs for more details." >> $GITHUB_STEP_SUMMARY

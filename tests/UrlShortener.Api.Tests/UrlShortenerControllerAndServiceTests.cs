@@ -1,0 +1,336 @@
+﻿using System.Threading.Tasks;
+using API.Controllers;
+using API.DTOs.UrlMapping;
+using Application.Services;
+using Domain.Entities;
+using Domain.Interfaces;
+using Domain.Result;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
+using StackExchange.Redis;
+using Xunit;
+
+namespace UrlShortener.Api.Tests
+{
+    public class UrlShortenerControllerAndServiceTests
+    {
+        private readonly UrlShortenerController _controller;
+        private readonly Mock<IUrlMappingService> _serviceMock;
+        private readonly Mock<ILogger<UrlShortenerController>> _loggerMock;
+
+        public UrlShortenerControllerAndServiceTests()
+        {
+            _serviceMock = new Mock<IUrlMappingService>();
+            _loggerMock = new Mock<ILogger<UrlShortenerController>>();
+            _controller = new UrlShortenerController(_loggerMock.Object, _serviceMock.Object);
+            
+            // Set up HTTP context for Request.Scheme and Request.Host
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.Scheme = "https";
+            httpContext.Request.Host = new HostString("test.com");
+            _controller.ControllerContext = new ControllerContext()
+            {
+                HttpContext = httpContext
+            };
+        }
+
+        [Fact]
+        public async Task CreateShortUrl_ShouldReturnCreatedAtActionResult_WhenRequestIsValid()
+        {
+            // Arrange
+            var request = new CreateUrlMappingRequest
+            {
+                OriginalUrl = "https://ElectronicAndGames.com",
+                CustomShortCode = "EAGA2025",
+                Title = "Electronic and Games",
+                Description = "Store for selling electronic devices and games",
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            var createdUrl = new UrlMapping
+            {
+                Id = 1,
+                OriginalUrl = request.OriginalUrl,
+                ShortCode = request.CustomShortCode,
+                Title = request.Title,
+                Description = request.Description,
+                ExpiresAt = request.ExpiresAt,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _serviceMock
+                .Setup(s => s.CreateUrlMappingAsync(It.IsAny<UrlMapping>(), request.CustomShortCode))
+                .ReturnsAsync(new Success<UrlMapping>(createdUrl));
+
+            // Act
+            var result = await _controller.CreateShortUrl(request);
+
+            // Assert
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            var response = Assert.IsType<CreateUrlMappingResponse>(createdResult.Value);
+
+            Assert.Equal(request.CustomShortCode, response.ShortCode);
+            Assert.Equal(1, response.Id);
+            Assert.Equal($"https://test.com/{request.CustomShortCode}", response.ShortUrl);
+        }
+
+        [Fact]
+        public async Task DeleteUrlMapping_ShouldReturnNoContent_WhenUrlExists()
+        {
+            // Arrange
+            int urlId = 1;
+            var existingUrl = new UrlMapping { Id = urlId, ShortCode = "EAGA2025" };
+
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
+            _serviceMock.Setup(s => s.DeleteUrlAsync(urlId)).ReturnsAsync(new Success<bool>(true));
+
+            // Act
+            var result = await _controller.DeleteUrlMapping(urlId);
+
+            // Assert
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
+        public async Task DeleteUrlMapping_ShouldReturnNotFound_WhenUrlDoesNotExist()
+        {
+            // Arrange
+            int urlId = 1;
+            _serviceMock.Setup(s => s.GetByIdAsync(urlId)).ReturnsAsync(new Success<UrlMapping?>(null));
+
+            // Act
+            var result = await _controller.DeleteUrlMapping(urlId);
+
+            // Assert  
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal(404, notFoundResult.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpdateUrl_ShouldReturnOk_WhenUpdateIsSuccessful()
+        {
+            // Arrange
+            var updateRequest = new UpdateUrlMappingRequest
+            {
+                Id = 1,
+                OriginalUrl = "https://UpdatedUrl.com",
+                Title = "Updated Title",
+                Description = "Updated description",
+                CustomShortCode = "EAGA2025",
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            var existingUrl = new UrlMapping { Id = 1, ShortCode = "EAGA2025" };
+            var updatedUrl = new UrlMapping 
+            { 
+                Id = 1, 
+                ShortCode = updateRequest.CustomShortCode!,
+                OriginalUrl = updateRequest.OriginalUrl!,
+                Title = updateRequest.Title,
+                Description = updateRequest.Description,
+                ExpiresAt = updateRequest.ExpiresAt,
+                IsActive = updateRequest.IsActive
+            };
+
+            _serviceMock.Setup(s => s.GetByIdAsync(updateRequest.Id)).ReturnsAsync(new Success<UrlMapping?>(existingUrl));
+            _serviceMock.Setup(s => s.UpdateUrlAsync(It.IsAny<UrlMapping>(), updateRequest.CustomShortCode))
+                        .ReturnsAsync(new Success<UrlMapping>(updatedUrl));
+
+            // Act
+            var result = await _controller.UpdateUrl(updateRequest);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result); // for ActionResult<T>
+            var response = Assert.IsType<UrlMappingResponse>(okResult.Value);
+
+            Assert.Equal(updateRequest.CustomShortCode, response.ShortCode);
+        }
+
+        [Fact]
+        public async Task UpdateUrl_ShouldReturnNotFound_WhenUrlMappingDoesNotExist()
+        {
+            // Arrange
+            var updateRequest = new UpdateUrlMappingRequest
+            {
+                Id = 999, // non-existent ID
+                Title = "Attempted Update",
+                Description = "This update should fail",
+                CustomShortCode = "FAIL2025",
+                OriginalUrl = "http://nonexistent.com",
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            // Mock the service to return failure when updating a non-existent URL mapping
+            _serviceMock
+                .Setup(s => s.GetByIdAsync(updateRequest.Id))
+                .ReturnsAsync(new Failure<UrlMapping?>(new Error("URL not found", ErrorCode.NOT_FOUND)));
+
+            // Act
+            var result = await _controller.UpdateUrl(updateRequest);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result.Result); // Controller returns ObjectResult with status code
+            Assert.Equal(404, objectResult.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetAllUrls_ShouldReturnOk_WithAllUrls()
+        {
+            // Arrange
+            var urls = new List<UrlMapping>
+            {
+                new UrlMapping { Id = 1, ShortCode = "abc123", OriginalUrl = "http://example1.com" },
+                new UrlMapping { Id = 2, ShortCode = "def456", OriginalUrl = "http://example2.com" }
+            };
+            _serviceMock.Setup(s => s.GetAllUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
+
+            // Act
+            var result = await _controller.GetAllUrls();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsAssignableFrom<IEnumerable<UrlMappingResponse>>(okResult.Value);
+            Assert.Equal(2, response.Count());
+        }
+
+        [Fact]
+        public async Task GetUrlById_ShouldReturnOk_WhenUrlExists()
+        {
+            // Arrange
+            var url = new UrlMapping { Id = 1, ShortCode = "abc123", OriginalUrl = "http://example.com" };
+            _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(new Success<UrlMapping?>(url));
+
+            // Act
+            var result = await _controller.GetUrlById(1);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<UrlMappingResponse>(okResult.Value);
+            Assert.Equal("abc123", response.ShortCode);
+        }
+
+        [Fact]
+        public async Task GetUrlById_ShouldReturnNotFound_WhenUrlDoesNotExist()
+        {
+            // Arrange
+            _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Success<UrlMapping?>(null));
+
+            // Act
+            var result = await _controller.GetUrlById(999);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            Assert.Equal(404, notFoundResult.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetActiveUrls_ShouldReturnOk_WithActiveUrls()
+        {
+            // Arrange
+            var urls = new List<UrlMapping>
+            {
+                new UrlMapping { Id = 1, ShortCode = "active1", OriginalUrl = "http://active.com", IsActive = true },
+            };
+            _serviceMock.Setup(s => s.GetActiveUrlsAsync()).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
+
+            // Act
+            var result = await _controller.GetActiveUrls();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsAssignableFrom<IEnumerable<UrlMappingResponse>>(okResult.Value);
+            Assert.Single(response);
+        }
+
+        [Fact]
+        public async Task GetMostClickedUrl_ShouldReturnOk_WithPopularUrls()
+        {
+            // Arrange
+            var urls = new List<UrlMapping>
+            {
+                new UrlMapping { Id = 1, ShortCode = "most1", OriginalUrl = "http://popular.com", ClickCount = 10 },
+                new UrlMapping { Id = 2, ShortCode = "most2", OriginalUrl = "http://popular2.com", ClickCount = 8 }
+            };
+            _serviceMock.Setup(s => s.GetMostClickedUrlsAsync(2)).ReturnsAsync(new Success<IEnumerable<UrlMapping>>(urls));
+
+            // Act
+            var result = await _controller.GetMostClickedUrl(2);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsAssignableFrom<IEnumerable<UrlMappingResponse>>(okResult.Value);
+            Assert.Equal(2, response.Count());
+        }
+
+        [Fact]
+        public async Task RedirectByShortCode_ShouldReturnRedirect_WhenShortCodeExists()
+        {
+            // Arrange
+            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("abc123")).ReturnsAsync(new Success<string>("http://original.com"));
+
+            // Act
+            var result = await _controller.RedirectByShortCode("abc123");
+
+            // Assert
+            var redirectResult = Assert.IsType<RedirectResult>(result);
+            Assert.Equal("http://original.com", redirectResult.Url);
+        }
+
+        [Fact]
+        public async Task RedirectByShortCode_ShouldReturnNotFound_WhenShortCodeDoesNotExist()
+        {
+            // Arrange
+            _serviceMock.Setup(s => s.RedirectToOriginalUrlAsync("nonexistent")).ReturnsAsync(new Failure<string>(new Error("URL not found", ErrorCode.NOT_FOUND)));
+
+            // Act
+            var result = await _controller.RedirectByShortCode("nonexistent");
+
+            // Assert
+            var statusCodeResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(404, statusCodeResult.StatusCode);
+        }
+
+
+        [Fact]
+        public async Task DeactivateExpiredUrlsAsync_ShouldUseBulkOperation_ForOptimalPerformance()
+        {
+            var mockRepo = new Mock<IUrlMappingRepository>();
+            var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockLogger = new Mock<ILogger<UrlMappingService>>();
+            var mockShortUrlService = new Mock<IShortUrlGeneratorService>();
+            var mockRedis = new Mock<IConnectionMultiplexer>();
+            mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(Mock.Of<IDatabase>());
+
+            // Setup UnitOfWork to return mocked repository
+            mockUnitOfWork.Setup(u => u.UrlMappings).Returns(mockRepo.Object);
+
+            var service = new UrlMappingService(
+                mockUnitOfWork.Object,
+                mockLogger.Object,
+                mockShortUrlService.Object,
+                mockRedis.Object
+            );
+
+            //Arrange
+            int expectedDeactivatedCount = 3;
+            mockRepo.Setup(r => r.DeactivateExpiredUrlsBulkAsync())
+                    .ReturnsAsync(new Success<int>(expectedDeactivatedCount));
+
+            //Act
+            var result = await service.DeactivateExpiredUrlsAsync();
+
+            // Assert
+            Assert.IsType<Success<bool>>(result);
+            var successResult = result as Success<bool>;
+            Assert.True(successResult!.res);
+            
+            // Verify bulk operation was called once instead of individual updates
+            mockRepo.Verify(r => r.DeactivateExpiredUrlsBulkAsync(), Times.Once);
+            mockRepo.Verify(r => r.UpdateAsync(It.IsAny<UrlMapping>()), Times.Never);
+            mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        }
+    }
+}
