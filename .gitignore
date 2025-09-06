@@ -56,6 +56,8 @@ nunit-*.xml
 
 # Environment files with sensitive data
 .env
+.env.newRelic
+.env.staging
 docker/.env
 
 # CACHING_GUIDE.md

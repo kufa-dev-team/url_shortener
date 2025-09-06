@@ -1,9 +1,10 @@
-
 using API.DTOs.UrlMapping;
 using Microsoft.AspNetCore.Mvc;
 using Domain.Entities;
 using Domain.Interfaces;
 using Domain.Result;
+using NewRelic.Api.Agent; // New Relic APM API for custom metrics & traces
+using System.Collections.Generic; // For custom events payloads
 
 namespace API.Controllers
 {
@@ -25,44 +26,94 @@ namespace API.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(CreateUrlMappingResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Trace] // Enable detailed tracing for this action
         public async Task<ActionResult<CreateUrlMappingResponse>> CreateShortUrl([FromBody] CreateUrlMappingRequest request)
         {
+            // Start timing for latency measurement
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            var urlMapping = new UrlMapping
+            // Name the transaction clearly in APM (category, name)
+            NewRelic.Api.Agent.NewRelic.SetTransactionName("UrlShortener", "Create");
+
+            // Acquire agent and current transaction to add attributes
+            var agent = NewRelic.Api.Agent.NewRelic.GetAgent();
+            var tx = agent.CurrentTransaction;
+
+            // Add useful custom attributes for filtering in APM
+            tx.AddCustomAttribute("endpoint", "POST /UrlShortener");
+            tx.AddCustomAttribute("hasCustomShortCode", !string.IsNullOrWhiteSpace(request.CustomShortCode));
+
+            try
             {
-                OriginalUrl = request.OriginalUrl,
-                ExpiresAt = request.ExpiresAt,
-                Title = request.Title,
-                Description = request.Description,
-            };
-            var CreatedUrl = await _urlMappingService.CreateUrlMappingAsync(urlMapping, request.CustomShortCode);
-            if (CreatedUrl is Failure<UrlMapping> failure)
-            {
-                return StatusCode((int)failure.error.code, failure.error.message);
-            }
-            if (CreatedUrl is Success<UrlMapping> url)
-            {
-                return CreatedAtAction
-                (
-                    nameof(GetUrlById),
-                    new { id = url.res.Id },
-                    new CreateUrlMappingResponse
+                var urlMapping = new UrlMapping
+                {
+                    OriginalUrl = request.OriginalUrl,
+                    ExpiresAt = request.ExpiresAt,
+                    Title = request.Title,
+                    Description = request.Description,
+                };
+                var CreatedUrl = await _urlMappingService.CreateUrlMappingAsync(urlMapping, request.CustomShortCode);
+                if (CreatedUrl is Failure<UrlMapping> failure)
+                {
+                    // Mark as failure and record a custom event
+                    tx.AddCustomAttribute("success", false);
+                    tx.AddCustomAttribute("errorCode", (int)failure.error.code);
+                    NewRelic.Api.Agent.NewRelic.RecordCustomEvent("UrlCreate", new Dictionary<string, object>
                     {
-                        Id = url.res.Id,
-                        ShortCode = url.res.ShortCode,
-                        OriginalUrl = url.res.OriginalUrl,
-                        ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.res.ShortCode}",
-                        CreatedAt = url.res.CreatedAt,
-                        UpdatedAt = url.res.UpdatedAt,
-                        Title = url.res.Title,
-                        Description = url.res.Description,
-                        ExpiresAt = url.res.ExpiresAt,
-                        IsActive = url.res.IsActive,
-                        ClickCount = url.res.ClickCount
-                    }
-                );
+                        {"outcome", "Failure"},
+                        {"errorCode", (int)failure.error.code}
+                    });
+                    return StatusCode((int)failure.error.code, failure.error.message);
+                }
+                if (CreatedUrl is Success<UrlMapping> url)
+                {
+                    // Mark as success and record a custom event
+                    tx.AddCustomAttribute("success", true);
+                    tx.AddCustomAttribute("shortCode", url.res.ShortCode ?? string.Empty);
+                    NewRelic.Api.Agent.NewRelic.RecordCustomEvent("UrlCreate", new Dictionary<string, object>
+                    {
+                        {"outcome", "Success"},
+                        {"shortCode", url.res.ShortCode ?? string.Empty}
+                    });
+
+                    return CreatedAtAction
+                    (
+                        nameof(GetUrlById),
+                        new { id = url.res.Id },
+                        new CreateUrlMappingResponse
+                        {
+                            Id = url.res.Id,
+                            ShortCode = url.res.ShortCode,
+                            OriginalUrl = url.res.OriginalUrl,
+                            ShortUrl = $"{Request.Scheme}://{Request.Host}/{url.res.ShortCode}",
+                            CreatedAt = url.res.CreatedAt,
+                            UpdatedAt = url.res.UpdatedAt,
+                            Title = url.res.Title,
+                            Description = url.res.Description,
+                            ExpiresAt = url.res.ExpiresAt,
+                            IsActive = url.res.IsActive,
+                            ClickCount = url.res.ClickCount
+                        }
+                    );
+                }
+                // Unexpected path
+                tx.AddCustomAttribute("success", false);
+                NewRelic.Api.Agent.NewRelic.RecordCustomEvent("UrlCreate", new Dictionary<string, object>
+                {
+                    {"outcome", "Unexpected"}
+                });
+                return StatusCode(500, "Internal server error");
             }
-            return StatusCode(500, "Internal server error");
+            finally
+            {
+                // Stop timer and submit latency metric
+                sw.Stop();
+                tx.AddCustomAttribute("latencyMs", sw.ElapsedMilliseconds);
+                NewRelic.Api.Agent.NewRelic.RecordCustomEvent("UrlCreateLatency", new Dictionary<string, object>
+                {
+                    {"latencyMs", sw.ElapsedMilliseconds}
+                });
+            }
         }
 
         [HttpDelete]
@@ -239,29 +290,77 @@ namespace API.Controllers
         }
         // Redirect endpoint: GET /{shortCode}
         // This endpoint returns a 302 redirect to the original URL if found, or 404 if not found.
-        [HttpGet("{shortCode}")]
+        [HttpGet("/{shortCode}")]
         [ProducesResponseType(StatusCodes.Status302Found)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [Trace] // Enable detailed tracing for redirect
         public async Task<IActionResult> RedirectByShortCode(string shortCode)
         {
+            // Start timing and name the transaction for APM
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            NewRelic.Api.Agent.NewRelic.SetTransactionName("UrlShortener", "Redirect");
+            var agent = NewRelic.Api.Agent.NewRelic.GetAgent();
+            var tx = agent.CurrentTransaction;
+            tx.AddCustomAttribute("endpoint", "GET /{shortCode}");
+            tx.AddCustomAttribute("shortCode", shortCode);
+
             _logger.LogTrace("Redirect requested for short code: {ShortCode}", shortCode);
 
-            var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
-            if (originalUrlResult is Failure<string> originalUrlFailure)
+            try
             {
-                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
-                return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
-            }
-            var originalUrl = (originalUrlResult as Success<string>)?.res;
+                var originalUrlResult = await _urlMappingService.RedirectToOriginalUrlAsync(shortCode);
+                if (originalUrlResult is Failure<string> originalUrlFailure)
+                {
+                    // Failure path: record and return
+                    tx.AddCustomAttribute("success", false);
+                    tx.AddCustomAttribute("errorCode", (int)originalUrlFailure.error.code);
+                    NewRelic.Api.Agent.NewRelic.RecordCustomEvent("Redirect", new Dictionary<string, object>
+                    {
+                        {"outcome", "Failure"},
+                        {"errorCode", (int)originalUrlFailure.error.code},
+                        {"shortCode", shortCode}
+                    });
 
-            if (string.IsNullOrEmpty(originalUrl))
+                    _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
+                    return StatusCode((int)originalUrlFailure.error.code, originalUrlFailure.error.message);
+                }
+                var originalUrl = (originalUrlResult as Success<string>)?.res;
+
+                if (string.IsNullOrEmpty(originalUrl))
+                {
+                    tx.AddCustomAttribute("success", false);
+                    NewRelic.Api.Agent.NewRelic.RecordCustomEvent("Redirect", new Dictionary<string, object>
+                    {
+                        {"outcome", "NotFound"},
+                        {"shortCode", shortCode}
+                    });
+
+                    _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
+                    return NotFound("Short URL not found");
+                }
+
+                // Success path
+                tx.AddCustomAttribute("success", true);
+                NewRelic.Api.Agent.NewRelic.RecordCustomEvent("Redirect", new Dictionary<string, object>
+                {
+                    {"outcome", "Success"},
+                    {"shortCode", shortCode}
+                });
+
+                _logger.LogInformation("Redirecting short code {ShortCode} to {OriginalUrl}", shortCode, originalUrl);
+                return Redirect(originalUrl);
+            }
+            finally
             {
-                _logger.LogWarning("Short code not found: {ShortCode}", shortCode);
-                return NotFound("Short URL not found");
+                // Always emit latency metric
+                sw.Stop();
+                tx.AddCustomAttribute("latencyMs", sw.ElapsedMilliseconds);
+                NewRelic.Api.Agent.NewRelic.RecordCustomEvent("RedirectLatency", new Dictionary<string, object>
+                {
+                    {"latencyMs", sw.ElapsedMilliseconds},
+                    {"shortCode", shortCode}
+                });
             }
-
-            _logger.LogInformation("Redirecting short code {ShortCode} to {OriginalUrl}", shortCode, originalUrl);
-            return Redirect(originalUrl);
         }
 
         [HttpPost("DeactivateExpired")]

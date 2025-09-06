@@ -77,7 +77,7 @@ services:
     platform: linux/arm64
     container_name: urlshortener-newrelic-dev
     env_file:
-      - ../.env.staging
+      - ./.env.newRelic
     environment:
       - NRIA_DISPLAY_NAME=URLShortener-Development
       - NRIA_VERBOSE=1
