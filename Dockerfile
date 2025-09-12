@@ -21,6 +21,7 @@ COPY src/ ./src/
 COPY tests/ ./tests/
 
 # Build the application for the target runtime
+RUN dotnet restore src/API/API.csproj -r linux-musl-x64
 RUN dotnet build src/API/API.csproj -c Release --no-restore --runtime linux-musl-x64
 
 # Publish the application with optimizations
