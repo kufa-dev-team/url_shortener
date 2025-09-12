@@ -7,7 +7,14 @@
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "NEW_RELIC_LICENSE_KEY": "c6e1e7c9474c5397bcabb2d8c0759efeFFFFNRAL",
+        "NEW_RELIC_APP_NAME": "UrlShortener-API-Dev",
+        "NEW_RELIC_DISTRIBUTED_TRACING_ENABLED": "true",
+        "NEW_RELIC_LOG": "stdout",
+        "NEW_RELIC_LOG_LEVEL": "info",
+        "CORECLR_ENABLE_PROFILING": "1",
+        "CORECLR_PROFILER": "{36032161-FFC0-4B61-B559-F6C5D41BAE5A}"   
       }
     },
     "https": {
@@ -16,7 +23,17 @@
       "launchBrowser": false,
       "applicationUrl": "https://localhost:7127;http://localhost:5135",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "NEW_RELIC_LICENSE_KEY": "c6e1e7c9474c5397bcabb2d8c0759efeFFFFNRAL",
+        "NEW_RELIC_APP_NAME": "UrlShortener-API-Dev",
+        "NEW_RELIC_DISTRIBUTED_TRACING_ENABLED": "true",
+        "NEW_RELIC_LOG": "stdout",
+        "NEW_RELIC_LOG_LEVEL": "info",
+        "CORECLR_ENABLE_PROFILING": "1",
+        "CORECLR_PROFILER": "{36032161-FFC0-4B61-B559-F6C5D41BAE5A}",
+        "NEW_RELIC_DOTNET_AGENT_HOME": "C:\\ProgramData\\New Relic\\.NET Agent",
+        "CORECLR_PROFILER_PATH": "C:\\ProgramData\\New Relic\\.NET Agent\\NewRelic.Profiler.dll"
+        
       }
     }
   }
